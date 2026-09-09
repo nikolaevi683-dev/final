@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Trade Journal</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- ==================== ГЛАВНАЯ ==================== -->
+
+    <div id="homePage">
+
+        <h1>Trade Journal</h1>
+        <p class="subtitle">Мой торговый журнал</p>
+
+        <!-- КНОПКА ДОБАВИТЬ СДЕЛКУ -->
+
+        <button class="add-button" onclick="openTradeForm()">
+            + Добавить сделку
+        </button>
+
+
+        <!-- КАЛЕНДАРЬ -->
+
+        <div class="calendar-section">
+
+            <div class="calendar-header">
+
+                <button class="calendar-arrow" onclick="changeMonth(-1)">
+                    ‹
+                </button>
+
+                <h2 id="calendarMonth">
+                    Сентябрь 2026
+                </h2>
+
+                <button class="calendar-arrow" onclick="changeMonth(1)">
+                    ›
+                </button>
+
+            </div>
+
+
+            <div class="weekdays">
+
+                <span>ПН</span>
+                <span>ВТ</span>
+                <span>СР</span>
+                <span>ЧТ</span>
+                <span>ПТ</span>
+                <span>СБ</span>
+                <span>ВС</span>
+
+            </div>
+
+
+            <div id="calendar" class="calendar">
+
+                <!-- Дни создаются через JavaScript -->
+
+            </div>
+
+        </div>
+
+
+        <!-- ИНФОРМАЦИЯ О ВЫБРАННОМ ДНЕ -->
+
+        <div id="dayTrades" class="day-trades hidden">
+
+            <h2 id="selectedDayTitle">
+                Сделки
+            </h2>
+
+            <div id="selectedDayList"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================== ПРОФИЛЬ ==================== -->
+
+    <div id="profilePage" class="hidden">
+
+        <h1>Профиль</h1>
+        <p class="subtitle">Твоя статистика</p>
+
+
+        <!-- ПРОФИТ СЕГОДНЯ -->
+
+        <div class="profile-stat">
+
+            <span>Профит сегодня</span>
+
+            <strong id="profileTodayPnl">
+                0 ₽
+            </strong>
+
+        </div>
+
+
+        <!-- ПРОФИТ ВСЕГО -->
+
+        <div class="profile-stat">
+
+            <span>Профит за всё время</span>
+
+            <strong id="profileTotalPnl">
+                0 ₽
+            </strong>
+
+        </div>
+
+
+        <!-- СТАТИСТИКА -->
+
+        <h2 class="profile-title">
+            Статистика
+        </h2>
+
+
+        <div class="details-card">
+
+            <div class="detail-row">
+
+                <span>Всего сделок</span>
+
+                <strong id="profileTrades">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span>Прибыльных</span>
+
+                <strong id="profileWins">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span>Убыточных</span>
+
+                <strong id="profileLosses">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span>Win Rate</span>
+
+                <strong id="profileWinRate">
+                    0%
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <!-- ВСЕ СДЕЛКИ -->
+
+        <h2 class="profile-title">
+            Все сделки
+        </h2>
+
+
+        <div id="profileTradesList">
+
+            <div class="empty">
+                Сделок пока нет
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================== ПРОСМОТР СДЕЛКИ ==================== -->
+
+    <div id="tradeDetails" class="hidden">
+
+        <button class="back-button" onclick="closeTradeDetails()">
+            ← Назад
+        </button>
+
+        <h1 id="detailsSymbol">
+            BTCUSDT
+        </h1>
+
+        <p class="subtitle" id="detailsDate">
+            8 сентября 2026
+        </p>
+
+
+        <div class="details-card">
+
+            <div class="detail-row">
+
+                <span>Направление</span>
+
+                <strong id="detailsDirection"></strong>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span>Цена входа</span>
+
+                <strong id="detailsEntry"></strong>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span>Цена выхода</span>
+
+                <strong id="detailsExit"></strong>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span>Stop Loss</span>
+
+                <strong id="detailsStopLoss"></strong>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span>Take Profit</span>
+
+                <strong id="detailsTakeProfit"></strong>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span>Результат</span>
+
+                <strong id="detailsPnl"></strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="details-comment">
+
+            <span>Комментарий</span>
+
+            <p id="detailsComment">
+                —
+            </p>
+
+        </div>
+
+
+        <button class="edit-button" onclick="editTrade()">
+            Изменить
+        </button>
+
+
+        <button class="delete-button" onclick="deleteTrade()">
+            Удалить сделку
+        </button>
+
+    </div>
+
+
+    <!-- ==================== ФОРМА СДЕЛКИ ==================== -->
+
+    <div id="tradePage" class="hidden">
+
+        <button class="back-button" onclick="closeTradeForm()">
+            ← Назад
+        </button>
+
+        <h1 id="formTitle">
+            Новая сделка
+        </h1>
+
+        <p class="subtitle">
+            Заполни информацию о сделке
+        </p>
+
+
+        <div class="form">
+
+            <label>Инструмент</label>
+
+            <input
+                id="symbol"
+                type="text"
+                placeholder="Например BTCUSDT"
+            >
+
+
+            <label>Направление</label>
+
+            <div class="direction">
+
+                <button
+                    id="longButton"
+                    class="direction-button active"
+                    onclick="setDirection('LONG')"
+                >
+                    LONG
+                </button>
+
+
+                <button
+                    id="shortButton"
+                    class="direction-button"
+                    onclick="setDirection('SHORT')"
+                >
+                    SHORT
+                </button>
+
+            </div>
+
+
+            <label>Цена входа</label>
+
+            <input
+                id="entry"
+                type="number"
+                placeholder="0"
+            >
+
+
+            <label>Цена выхода</label>
+
+            <input
+                id="exit"
+                type="number"
+                placeholder="0"
+            >
+
+
+            <label>Stop Loss</label>
+
+            <input
+                id="stopLoss"
+                type="number"
+                placeholder="0"
+            >
+
+
+            <label>Take Profit</label>
+
+            <input
+                id="takeProfit"
+                type="number"
+                placeholder="0"
+            >
+
+
+            <label>Результат, ₽</label>
+
+            <input
+                id="pnl"
+                type="number"
+                placeholder="Например 1500"
+            >
+
+
+            <label>Комментарий</label>
+
+            <textarea
+                id="comment"
+                placeholder="Почему вошёл в сделку?"
+            ></textarea>
+
+
+            <button
+                class="save-button"
+                onclick="saveTrade()"
+            >
+                Сохранить сделку
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================== НИЖНЯЯ НАВИГАЦИЯ ==================== -->
+
+    <div class="bottom-nav">
+
+        <button
+            id="homeNav"
+            class="nav-button active"
+            onclick="showHome()"
+        >
+
+            <span class="nav-icon">
+                ⌂
+            </span>
+
+            <span>
+                Главная
+            </span>
+
+        </button>
+
+
+        <button
+            id="profileNav"
+            class="nav-button"
+            onclick="showProfile()"
+        >
+
+            <span class="nav-icon">
+                ◉
+            </span>
+
+            <span>
+                Профиль
+            </span>
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- SUPABASE -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="app.js"></script>
+
+</body>
+
+</html>

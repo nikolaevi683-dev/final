@@ -1,0 +1,456 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #0f1115;
+    color: white;
+}
+
+.app {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    padding-bottom: 100px;
+}
+
+h1 {
+    font-size: 30px;
+    margin-bottom: 5px;
+}
+
+h2 {
+    font-size: 20px;
+}
+
+.subtitle {
+    color: #888;
+    margin-bottom: 25px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+
+/* =========================
+   КНОПКА ДОБАВИТЬ
+========================= */
+
+.add-button,
+.save-button {
+    width: 100%;
+    padding: 17px;
+    border: none;
+    border-radius: 14px;
+    background: white;
+    color: black;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.add-button {
+    margin-bottom: 30px;
+}
+
+
+/* =========================
+   КАЛЕНДАРЬ
+========================= */
+
+.calendar-section {
+    margin-top: 10px;
+}
+
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.calendar-header h2 {
+    font-size: 18px;
+}
+
+.calendar-arrow {
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 12px;
+    background: #181b21;
+    color: white;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.weekdays span {
+    text-align: center;
+    color: #666;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendar-day {
+    min-height: 58px;
+    background: #181b21;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.15s;
+}
+
+.calendar-day:hover {
+    border-color: #3a3d44;
+}
+
+.calendar-day.empty-day {
+    background: transparent;
+    cursor: default;
+}
+
+.calendar-day.today {
+    border-color: #ffffff;
+}
+
+.calendar-number {
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.calendar-pnl {
+    margin-top: 5px;
+    font-size: 10px;
+    color: #888;
+}
+
+.calendar-day.profit {
+    background: #18241d;
+}
+
+.calendar-day.profit .calendar-pnl {
+    color: #69d58a;
+}
+
+.calendar-day.loss {
+    background: #26191b;
+}
+
+.calendar-day.loss .calendar-pnl {
+    color: #ff6868;
+}
+
+
+/* =========================
+   СДЕЛКИ ДНЯ
+========================= */
+
+.day-trades {
+    margin-top: 30px;
+}
+
+.day-trades h2 {
+    margin-bottom: 15px;
+}
+
+.card {
+    background: #181b21;
+    border-radius: 14px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.card span {
+    display: block;
+    color: #888;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.card strong {
+    font-size: 18px;
+}
+
+
+/* =========================
+   ПРОФИЛЬ
+========================= */
+
+.profile-stat {
+    background: #181b21;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 12px;
+}
+
+.profile-stat span {
+    display: block;
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.profile-stat strong {
+    font-size: 25px;
+}
+
+.profile-title {
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+
+/* =========================
+   СТАТИСТИКА
+========================= */
+
+.details-card {
+    background: #181b21;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 15px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid #292d35;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-row span {
+    color: #888;
+    font-size: 14px;
+}
+
+.detail-row strong {
+    font-size: 15px;
+}
+
+
+/* =========================
+   ФОРМА
+========================= */
+
+.form {
+    display: flex;
+    flex-direction: column;
+}
+
+.form label {
+    color: #aaa;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.form input,
+.form textarea {
+    width: 100%;
+    background: #181b21;
+    color: white;
+    border: 1px solid #292d35;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 16px;
+    outline: none;
+    margin-bottom: 18px;
+}
+
+.form textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-family: Arial, sans-serif;
+}
+
+.direction {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.direction-button {
+    padding: 15px;
+    border: 1px solid #292d35;
+    border-radius: 12px;
+    background: #181b21;
+    color: #888;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.direction-button.active {
+    background: white;
+    color: black;
+}
+
+.save-button {
+    margin-top: 10px;
+    margin-bottom: 30px;
+}
+
+
+/* =========================
+   ДЕТАЛИ СДЕЛКИ
+========================= */
+
+.back-button {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 16px;
+    padding: 0;
+    margin-bottom: 25px;
+    cursor: pointer;
+}
+
+.details-comment {
+    background: #181b21;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 20px;
+}
+
+.details-comment span {
+    display: block;
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.details-comment p {
+    color: white;
+    line-height: 1.5;
+}
+
+.edit-button,
+.delete-button {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.edit-button {
+    border: none;
+    background: white;
+    color: black;
+}
+
+.delete-button {
+    border: 1px solid #3a3d44;
+    background: transparent;
+    color: #ff5c5c;
+}
+
+
+/* =========================
+   НИЖНЯЯ НАВИГАЦИЯ
+========================= */
+
+.bottom-nav {
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(560px, calc(100% - 30px));
+    height: 65px;
+    background: #181b21;
+    border: 1px solid #292d35;
+    border-radius: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 6px;
+    z-index: 100;
+}
+
+.nav-button {
+    border: none;
+    background: transparent;
+    color: #666;
+    border-radius: 15px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 11px;
+}
+
+.nav-button.active {
+    background: #252830;
+    color: white;
+}
+
+.nav-icon {
+    font-size: 20px;
+}
+
+
+/* =========================
+   ПУСТО
+========================= */
+
+.empty {
+    text-align: center;
+    color: #666;
+    padding: 40px 0;
+}
+
+
+/* =========================
+   МОБИЛЬНЫЙ ЭКРАН
+========================= */
+
+@media (max-width: 400px) {
+
+    .app {
+        padding: 16px;
+        padding-bottom: 95px;
+    }
+
+    .calendar {
+        gap: 5px;
+    }
+
+    .weekdays {
+        gap: 5px;
+    }
+
+    .calendar-day {
+        min-height: 52px;
+        border-radius: 11px;
+    }
+
+}
