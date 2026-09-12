@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Trade Journal</title>
-
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -14,43 +11,29 @@
 
 <div class="app">
 
-    <!-- ==================== ГЛАВНАЯ ==================== -->
-
+    <!-- ГЛАВНАЯ -->
     <div id="homePage">
 
         <h1>Trade Journal</h1>
         <p class="subtitle">Мой торговый журнал</p>
 
-        <!-- КНОПКА ДОБАВИТЬ СДЕЛКУ -->
-
         <button class="add-button" onclick="openTradeForm()">
             + Добавить сделку
         </button>
 
-
-        <!-- КАЛЕНДАРЬ -->
-
         <div class="calendar-section">
 
             <div class="calendar-header">
-
-                <button class="calendar-arrow" onclick="changeMonth(-1)">
-                    ‹
-                </button>
+                <button class="calendar-arrow" onclick="changeMonth(-1)">‹</button>
 
                 <h2 id="calendarMonth">
                     Сентябрь 2026
                 </h2>
 
-                <button class="calendar-arrow" onclick="changeMonth(1)">
-                    ›
-                </button>
-
+                <button class="calendar-arrow" onclick="changeMonth(1)">›</button>
             </div>
 
-
             <div class="weekdays">
-
                 <span>ПН</span>
                 <span>ВТ</span>
                 <span>СР</span>
@@ -58,20 +41,11 @@
                 <span>ПТ</span>
                 <span>СБ</span>
                 <span>ВС</span>
-
             </div>
 
-
-            <div id="calendar" class="calendar">
-
-                <!-- Дни создаются через JavaScript -->
-
-            </div>
+            <div id="calendar" class="calendar"></div>
 
         </div>
-
-
-        <!-- ИНФОРМАЦИЯ О ВЫБРАННОМ ДНЕ -->
 
         <div id="dayTrades" class="day-trades hidden">
 
@@ -86,106 +60,170 @@
     </div>
 
 
-    <!-- ==================== ПРОФИЛЬ ==================== -->
-
+    <!-- ПРОФИЛЬ -->
     <div id="profilePage" class="hidden">
 
         <h1>Профиль</h1>
         <p class="subtitle">Твоя статистика</p>
 
-
-        <!-- ПРОФИТ СЕГОДНЯ -->
+        <div class="currency-selector">
+            <label>Валюта</label>
+            <select id="currencySelect" onchange="handleCurrencyChange()">
+                <option value="RUB">Рубль (₽)</option>
+                <option value="USD">Доллар ($)</option>
+                <option value="EUR">Евро (€)</option>
+            </select>
+            <div class="exchange-rates">
+                <span id="exchangeRateInfo" class="rate-info">
+                    Курс: 1 $ = 100 ₽ | 1 € = 115 ₽
+                </span>
+                <button 
+                    id="updateRatesBtn" 
+                    class="update-rates-button"
+                    onclick="updateRatesFromAPI()">
+                    🔄 Обновить курс
+                </button>
+            </div>
+        </div>
 
         <div class="profile-stat">
-
             <span>Профит сегодня</span>
-
-            <strong id="profileTodayPnl">
-                0 ₽
-            </strong>
-
+            <strong id="profileTodayPnl">0 ₽</strong>
         </div>
-
-
-        <!-- ПРОФИТ ВСЕГО -->
 
         <div class="profile-stat">
-
             <span>Профит за всё время</span>
-
-            <strong id="profileTotalPnl">
-                0 ₽
-            </strong>
-
+            <strong id="profileTotalPnl">0 ₽</strong>
         </div>
-
-
-        <!-- СТАТИСТИКА -->
 
         <h2 class="profile-title">
             Статистика
         </h2>
 
-
         <div class="details-card">
 
             <div class="detail-row">
-
                 <span>Всего сделок</span>
-
-                <strong id="profileTrades">
-                    0
-                </strong>
-
+                <strong id="profileTrades">0</strong>
             </div>
 
-
             <div class="detail-row">
-
                 <span>Прибыльных</span>
-
-                <strong id="profileWins">
-                    0
-                </strong>
-
+                <strong id="profileWins">0</strong>
             </div>
 
-
             <div class="detail-row">
-
                 <span>Убыточных</span>
-
-                <strong id="profileLosses">
-                    0
-                </strong>
-
+                <strong id="profileLosses">0</strong>
             </div>
 
-
             <div class="detail-row">
-
                 <span>Win Rate</span>
+                <strong id="profileWinRate">0%</strong>
+            </div>
 
-                <strong id="profileWinRate">
-                    0%
-                </strong>
+        </div>
+
+
+        <!-- НОВАЯ КНОПКА -->
+        <button class="all-trades-button" onclick="openAllTrades()">
+
+            <div>
+                <span>История</span>
+                <strong>Все сделки</strong>
+            </div>
+
+            <span class="all-trades-arrow">→</span>
+
+        </button>
+
+    </div>
+
+
+    <!-- ВСЕ СДЕЛКИ -->
+    <div id="allTradesPage" class="hidden">
+
+        <button class="back-button" onclick="closeAllTrades()">
+            ← Назад
+        </button>
+
+        <h1>Все сделки</h1>
+        <p class="subtitle">История твоей торговли</p>
+
+
+        <!-- ПЕРИОД -->
+        <div class="period-selector">
+
+            <button
+                class="period-button active"
+                data-period="today"
+                onclick="setTradePeriod('today')">
+                Сегодня
+            </button>
+
+            <button
+                class="period-button"
+                data-period="week"
+                onclick="setTradePeriod('week')">
+                7 дней
+            </button>
+
+            <button
+                class="period-button"
+                data-period="month"
+                onclick="setTradePeriod('month')">
+                30 дней
+            </button>
+
+            <button
+                class="period-button"
+                data-period="all"
+                onclick="setTradePeriod('all')">
+                Всё время
+            </button>
+
+        </div>
+
+
+        <!-- ИНФОРМАЦИЯ ЗА ПЕРИОД -->
+        <div class="period-profit">
+
+            <span id="periodTitle">
+                Профит сегодня
+            </span>
+
+            <strong id="periodPnl">
+                0 ₽
+            </strong>
+
+            <div class="period-meta">
+
+                <span>
+                    Сделок:
+                    <b id="periodTrades">0</b>
+                </span>
+
+                <span>
+                    Win Rate:
+                    <b id="periodWinRate">0%</b>
+                </span>
 
             </div>
 
         </div>
 
 
-        <!-- ВСЕ СДЕЛКИ -->
+        <!-- СПИСОК -->
+        <div class="all-trades-list">
 
-        <h2 class="profile-title">
-            Все сделки
-        </h2>
+            <h2>
+                Сделки
+            </h2>
 
-
-        <div id="profileTradesList">
-
-            <div class="empty">
-                Сделок пока нет
+            <div id="allTradesList">
+                <div class="empty">
+                    Сделок за этот период нет
+                </div>
             </div>
 
         </div>
@@ -193,8 +231,7 @@
     </div>
 
 
-    <!-- ==================== ПРОСМОТР СДЕЛКИ ==================== -->
-
+    <!-- ДЕТАЛИ СДЕЛКИ -->
     <div id="tradeDetails" class="hidden">
 
         <button class="back-button" onclick="closeTradeDetails()">
@@ -209,64 +246,39 @@
             8 сентября 2026
         </p>
 
-
         <div class="details-card">
 
             <div class="detail-row">
-
                 <span>Направление</span>
-
                 <strong id="detailsDirection"></strong>
-
             </div>
 
-
             <div class="detail-row">
-
                 <span>Цена входа</span>
-
                 <strong id="detailsEntry"></strong>
-
             </div>
 
-
             <div class="detail-row">
-
                 <span>Цена выхода</span>
-
                 <strong id="detailsExit"></strong>
-
             </div>
 
-
             <div class="detail-row">
-
                 <span>Stop Loss</span>
-
                 <strong id="detailsStopLoss"></strong>
-
             </div>
 
-
             <div class="detail-row">
-
                 <span>Take Profit</span>
-
                 <strong id="detailsTakeProfit"></strong>
-
             </div>
 
-
             <div class="detail-row">
-
                 <span>Результат</span>
-
                 <strong id="detailsPnl"></strong>
-
             </div>
 
         </div>
-
 
         <div class="details-comment">
 
@@ -278,11 +290,9 @@
 
         </div>
 
-
         <button class="edit-button" onclick="editTrade()">
             Изменить
         </button>
-
 
         <button class="delete-button" onclick="deleteTrade()">
             Удалить сделку
@@ -291,8 +301,7 @@
     </div>
 
 
-    <!-- ==================== ФОРМА СДЕЛКИ ==================== -->
-
+    <!-- ФОРМА -->
     <div id="tradePage" class="hidden">
 
         <button class="back-button" onclick="closeTradeForm()">
@@ -306,7 +315,6 @@
         <p class="subtitle">
             Заполни информацию о сделке
         </p>
-
 
         <div class="form">
 
@@ -326,17 +334,14 @@
                 <button
                     id="longButton"
                     class="direction-button active"
-                    onclick="setDirection('LONG')"
-                >
+                    onclick="setDirection('LONG')">
                     LONG
                 </button>
-
 
                 <button
                     id="shortButton"
                     class="direction-button"
-                    onclick="setDirection('SHORT')"
-                >
+                    onclick="setDirection('SHORT')">
                     SHORT
                 </button>
 
@@ -398,8 +403,7 @@
 
             <button
                 class="save-button"
-                onclick="saveTrade()"
-            >
+                onclick="saveTrade()">
                 Сохранить сделку
             </button>
 
@@ -408,23 +412,16 @@
     </div>
 
 
-    <!-- ==================== НИЖНЯЯ НАВИГАЦИЯ ==================== -->
-
+    <!-- НИЖНЯЯ НАВИГАЦИЯ -->
     <div class="bottom-nav">
 
         <button
             id="homeNav"
             class="nav-button active"
-            onclick="showHome()"
-        >
+            onclick="showHome()">
 
-            <span class="nav-icon">
-                ⌂
-            </span>
-
-            <span>
-                Главная
-            </span>
+            <span class="nav-icon">⌂</span>
+            <span>Главная</span>
 
         </button>
 
@@ -432,16 +429,10 @@
         <button
             id="profileNav"
             class="nav-button"
-            onclick="showProfile()"
-        >
+            onclick="showProfile()">
 
-            <span class="nav-icon">
-                ◉
-            </span>
-
-            <span>
-                Профиль
-            </span>
+            <span class="nav-icon">◉</span>
+            <span>Профиль</span>
 
         </button>
 
@@ -450,12 +441,8 @@
 </div>
 
 
-<!-- SUPABASE -->
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script src="app.js"></script>
 
 </body>
-
-</html>
+</html>ы

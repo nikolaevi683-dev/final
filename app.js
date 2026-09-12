@@ -1,39 +1,85 @@
 const SUPABASE_URL = "https://yehqvwojjaqfjmxumxkv.supabase.co";
-const SUPABASE_KEY = "sb_publishable_eD0UIwWs0FeUb1pHYrCulA_1gOb4BMy";
+
+const SUPABASE_KEY =
+    "sb_publishable_eD0UIwWs0FeUb1pHYrCulA_1gOb4BMy";
+
 
 const db = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
 
+
+// =========================================
+// GLOBAL VARIABLES
+// =========================================
+
 let trades = [];
+
 let direction = "LONG";
+
 let selectedTrade = null;
 
 let currentCalendarDate = new Date();
 
+let selectedPeriod = "today";
 
-/* =========================
-   ЗАПУСК
-========================= */
+let currentCurrency = "RUB";
+
+let lastRatesUpdate = null;
+
+// =========================================
+// CURRENCY DATA
+// =========================================
+
+const currencyData = {
+    RUB: { symbol: "₽", name: "Рубль" },
+    USD: { symbol: "$", name: "Доллар" },
+    EUR: { symbol: "€", name: "Евро" }
+};
+
+// Базовая валюта - РУБ
+// Курсы к рублю (актуальные на 12.09.2026)
+const exchangeRates = {
+    RUB: 1,           // 1 рубль = 1 рублю
+    USD: 100,         // 1 доллар = 100 рублей
+    EUR: 115          // 1 евро = 115 рублей
+};
+
+
+// =========================================
+// INIT
+// =========================================
 
 async function init() {
 
-    // Сначала проверяем существующую сессию
     const {
         data: { session }
     } = await db.auth.getSession();
 
+
     if (!session) {
 
-        const { data, error } =
-            await db.auth.signInAnonymously();
+        const {
+            data,
+            error
+        } = await db.auth.signInAnonymously();
+
 
         if (error) {
-            console.error("Auth error:", error);
-            alert("Ошибка подключения к аккаунту");
+
+            console.error(
+                "Auth error:",
+                error
+            );
+
+            alert(
+                "Ошибка подключения к аккаунту"
+            );
+
             return;
         }
+
 
         console.log(
             "Пользователь подключен:",
@@ -48,36 +94,66 @@ async function init() {
         );
     }
 
+
+    loadExchangeRates();
+
+    loadCurrency();
+
+    // Пытаемся обновить курсы с API при запуске
+    // Но не блокируем приложение если API недоступен
+    fetchExchangeRates().then(() => {
+
+        updateExchangeRateInfo();
+    });
+
     await loadTrades();
 
     renderCalendar();
+
     updateProfile();
 }
 
 
-/* =========================
-   НАВИГАЦИЯ
-========================= */
+// =========================================
+// NAVIGATION
+// =========================================
 
 function showHome() {
 
-    document.getElementById("homePage")
+    document
+        .getElementById("homePage")
         .classList.remove("hidden");
 
-    document.getElementById("profilePage")
+
+    document
+        .getElementById("profilePage")
         .classList.add("hidden");
 
-    document.getElementById("tradePage")
+
+    document
+        .getElementById("allTradesPage")
         .classList.add("hidden");
 
-    document.getElementById("tradeDetails")
+
+    document
+        .getElementById("tradePage")
         .classList.add("hidden");
 
-    document.getElementById("homeNav")
+
+    document
+        .getElementById("tradeDetails")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("homeNav")
         .classList.add("active");
 
-    document.getElementById("profileNav")
+
+    document
+        .getElementById("profileNav")
         .classList.remove("active");
+
 
     renderCalendar();
 }
@@ -85,118 +161,265 @@ function showHome() {
 
 function showProfile() {
 
-    document.getElementById("homePage")
+    document
+        .getElementById("homePage")
         .classList.add("hidden");
 
-    document.getElementById("profilePage")
+
+    document
+        .getElementById("profilePage")
         .classList.remove("hidden");
 
-    document.getElementById("tradePage")
+
+    document
+        .getElementById("allTradesPage")
         .classList.add("hidden");
 
-    document.getElementById("tradeDetails")
+
+    document
+        .getElementById("tradePage")
         .classList.add("hidden");
 
-    document.getElementById("homeNav")
+
+    document
+        .getElementById("tradeDetails")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("homeNav")
         .classList.remove("active");
 
-    document.getElementById("profileNav")
+
+    document
+        .getElementById("profileNav")
         .classList.add("active");
+
 
     updateProfile();
 }
 
 
-/* =========================
-   ФОРМА СДЕЛКИ
-========================= */
+// =========================================
+// OPEN ALL TRADES
+// =========================================
+
+function openAllTrades() {
+
+    document
+        .getElementById("homePage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("profilePage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("allTradesPage")
+        .classList.remove("hidden");
+
+
+    document
+        .getElementById("tradePage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("tradeDetails")
+        .classList.add("hidden");
+
+
+    selectedPeriod = "today";
+
+
+    updatePeriodButtons();
+
+    renderAllTrades();
+}
+
+
+// =========================================
+// CLOSE ALL TRADES
+// =========================================
+
+function closeAllTrades() {
+
+    document
+        .getElementById("allTradesPage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("profilePage")
+        .classList.remove("hidden");
+
+
+    updateProfile();
+}
+
+
+// =========================================
+// TRADE FORM
+// =========================================
 
 function openTradeForm() {
 
-    document.getElementById("homePage")
+    document
+        .getElementById("homePage")
         .classList.add("hidden");
 
-    document.getElementById("profilePage")
+
+    document
+        .getElementById("profilePage")
         .classList.add("hidden");
 
-    document.getElementById("tradePage")
+
+    document
+        .getElementById("allTradesPage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("tradeDetails")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("tradePage")
         .classList.remove("hidden");
+
+
+    document
+        .getElementById("formTitle")
+        .textContent = "Новая сделка";
+
+
+    clearForm();
+
+    resetSaveButton();
 }
 
 
 function closeTradeForm() {
 
-    document.getElementById("tradePage")
+    document
+        .getElementById("tradePage")
         .classList.add("hidden");
 
-    document.getElementById("homePage")
+
+    document
+        .getElementById("homePage")
         .classList.remove("hidden");
 
-    document.getElementById("formTitle")
+
+    document
+        .getElementById("formTitle")
         .textContent = "Новая сделка";
 
+
     clearForm();
+
+    resetSaveButton();
 }
 
 
-/* =========================
-   LONG / SHORT
-========================= */
+// =========================================
+// DIRECTION
+// =========================================
 
 function setDirection(value) {
 
     direction = value;
 
-    document.getElementById("longButton")
+
+    document
+        .getElementById("longButton")
         .classList.remove("active");
 
-    document.getElementById("shortButton")
+
+    document
+        .getElementById("shortButton")
         .classList.remove("active");
+
 
     if (value === "LONG") {
 
-        document.getElementById("longButton")
+        document
+            .getElementById("longButton")
             .classList.add("active");
 
     } else {
 
-        document.getElementById("shortButton")
+        document
+            .getElementById("shortButton")
             .classList.add("active");
     }
 }
 
 
-/* =========================
-   СОХРАНЕНИЕ СДЕЛКИ
-========================= */
+// =========================================
+// SAVE TRADE
+// =========================================
 
 async function saveTrade() {
 
     const symbol =
-        document.getElementById("symbol").value.trim();
+        document
+            .getElementById("symbol")
+            .value
+            .trim();
+
 
     const entry =
-        document.getElementById("entry").value;
+        document
+            .getElementById("entry")
+            .value;
+
 
     const exit =
-        document.getElementById("exit").value;
+        document
+            .getElementById("exit")
+            .value;
+
 
     const stopLoss =
-        document.getElementById("stopLoss").value;
+        document
+            .getElementById("stopLoss")
+            .value;
+
 
     const takeProfit =
-        document.getElementById("takeProfit").value;
+        document
+            .getElementById("takeProfit")
+            .value;
+
 
     const pnl =
-        document.getElementById("pnl").value;
+        document
+            .getElementById("pnl")
+            .value;
+
 
     const comment =
-        document.getElementById("comment").value.trim();
+        document
+            .getElementById("comment")
+            .value
+            .trim();
 
 
-    if (!symbol || !entry || !exit || !pnl) {
+    if (
+        !symbol ||
+        !entry ||
+        !exit ||
+        !pnl
+    ) {
 
-        alert("Заполни обязательные поля.");
+        alert(
+            "Заполни обязательные поля."
+        );
+
         return;
     }
 
@@ -208,7 +431,10 @@ async function saveTrade() {
 
     if (!user) {
 
-        alert("Пользователь не найден.");
+        alert(
+            "Пользователь не найден."
+        );
+
         return;
     }
 
@@ -217,13 +443,17 @@ async function saveTrade() {
 
         user_id: user.id,
 
-        symbol: symbol.toUpperCase(),
+        symbol:
+            symbol.toUpperCase(),
 
-        direction: direction,
+        direction:
+            direction,
 
-        entry: Number(entry),
+        entry:
+            Number(entry),
 
-        exit: Number(exit),
+        exit:
+            Number(exit),
 
         stop_loss:
             Number(stopLoss) || null,
@@ -231,16 +461,20 @@ async function saveTrade() {
         take_profit:
             Number(takeProfit) || null,
 
-        pnl: Number(pnl),
+        pnl:
+            Number(pnl),
 
-        comment: comment,
+        comment:
+            comment,
 
         trade_date:
-            new Date().toISOString().split("T")[0]
+            getLocalDateString()
     };
 
 
-    const { error } = await db
+    const {
+        error
+    } = await db
         .from("trades")
         .insert(trade);
 
@@ -263,17 +497,30 @@ async function saveTrade() {
 
     clearForm();
 
+    resetSaveButton();
+
     await loadTrades();
 
-    closeTradeForm();
 
-    alert("Сделка сохранена!");
+    document
+        .getElementById("tradePage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("homePage")
+        .classList.remove("hidden");
+
+
+    alert(
+        "Сделка сохранена!"
+    );
 }
 
 
-/* =========================
-   ЗАГРУЗКА СДЕЛОК
-========================= */
+// =========================================
+// LOAD TRADES
+// =========================================
 
 async function loadTrades() {
 
@@ -292,9 +539,12 @@ async function loadTrades() {
         .from("trades")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", {
-            ascending: false
-        });
+        .order(
+            "created_at",
+            {
+                ascending: false
+            }
+        );
 
 
     if (error) {
@@ -310,60 +560,105 @@ async function loadTrades() {
 
     trades = data || [];
 
+
     renderCalendar();
 
     updateProfile();
+
+
+    if (
+        !document
+            .getElementById("allTradesPage")
+            .classList.contains("hidden")
+    ) {
+
+        renderAllTrades();
+    }
 }
 
 
-/* =========================
-   ОЧИСТКА ФОРМЫ
-========================= */
+// =========================================
+// CLEAR FORM
+// =========================================
 
 function clearForm() {
 
-    document.getElementById("symbol").value = "";
+    document
+        .getElementById("symbol")
+        .value = "";
 
-    document.getElementById("entry").value = "";
 
-    document.getElementById("exit").value = "";
+    document
+        .getElementById("entry")
+        .value = "";
 
-    document.getElementById("stopLoss").value = "";
 
-    document.getElementById("takeProfit").value = "";
+    document
+        .getElementById("exit")
+        .value = "";
 
-    document.getElementById("pnl").value = "";
 
-    document.getElementById("comment").value = "";
+    document
+        .getElementById("stopLoss")
+        .value = "";
+
+
+    document
+        .getElementById("takeProfit")
+        .value = "";
+
+
+    document
+        .getElementById("pnl")
+        .value = "";
+
+
+    document
+        .getElementById("comment")
+        .value = "";
+
 
     setDirection("LONG");
 }
 
 
-/* =========================
-   КАЛЕНДАРЬ
-========================= */
+// =========================================
+// CALENDAR
+// =========================================
 
 function renderCalendar() {
 
     const calendar =
-        document.getElementById("calendar");
+        document.getElementById(
+            "calendar"
+        );
+
 
     const monthTitle =
-        document.getElementById("calendarMonth");
+        document.getElementById(
+            "calendarMonth"
+        );
 
 
-    if (!calendar || !monthTitle) return;
+    if (
+        !calendar ||
+        !monthTitle
+    ) {
+        return;
+    }
 
 
     calendar.innerHTML = "";
 
 
     const year =
-        currentCalendarDate.getFullYear();
+        currentCalendarDate
+            .getFullYear();
+
 
     const month =
-        currentCalendarDate.getMonth();
+        currentCalendarDate
+            .getMonth();
 
 
     const monthNames = [
@@ -385,26 +680,34 @@ function renderCalendar() {
 
 
     monthTitle.textContent =
-        monthNames[month] + " " + year;
+        monthNames[month] +
+        " " +
+        year;
 
 
-    // Первый день месяца
     let firstDay =
-        new Date(year, month, 1).getDay();
+        new Date(
+            year,
+            month,
+            1
+        ).getDay();
 
 
-    // Переводим воскресенье с 0 на 7
     if (firstDay === 0) {
         firstDay = 7;
     }
 
 
-    // Количество дней
     const daysInMonth =
-        new Date(year, month + 1, 0).getDate();
+        new Date(
+            year,
+            month + 1,
+            0
+        ).getDate();
 
 
-    // Пустые клетки перед первым днём
+    // EMPTY DAYS
+
     for (
         let i = 1;
         i < firstDay;
@@ -412,16 +715,23 @@ function renderCalendar() {
     ) {
 
         const empty =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
+
 
         empty.className =
             "calendar-day empty-day";
 
-        calendar.appendChild(empty);
+
+        calendar.appendChild(
+            empty
+        );
     }
 
 
-    // Дни месяца
+    // DAYS
+
     for (
         let day = 1;
         day <= daysInMonth;
@@ -429,59 +739,82 @@ function renderCalendar() {
     ) {
 
         const dateString =
-            formatDate(year, month + 1, day);
+            formatDate(
+                year,
+                month + 1,
+                day
+            );
 
 
         const dayTrades =
             trades.filter(
                 trade =>
-                    trade.trade_date === dateString
+                    trade.trade_date ===
+                    dateString
             );
 
 
         const totalPnl =
             dayTrades.reduce(
-                (sum, trade) =>
-                    sum + Number(trade.pnl),
+                (
+                    sum,
+                    trade
+                ) =>
+                    sum +
+                    Number(trade.pnl),
+
                 0
             );
 
 
         const dayElement =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
+
 
         dayElement.className =
             "calendar-day";
 
 
-        // Сегодня
-        const today =
-            new Date();
+        // TODAY
 
         const todayString =
-            formatDate(
-                today.getFullYear(),
-                today.getMonth() + 1,
-                today.getDate()
+            getLocalDateString();
+
+
+        if (
+            dateString ===
+            todayString
+        ) {
+
+            dayElement.classList.add(
+                "today"
             );
-
-
-        if (dateString === todayString) {
-
-            dayElement.classList.add("today");
         }
 
 
-        // Профит / убыток
-        if (dayTrades.length > 0) {
+        // PROFIT / LOSS
 
-            if (totalPnl > 0) {
+        if (
+            dayTrades.length > 0
+        ) {
 
-                dayElement.classList.add("profit");
+            if (
+                totalPnl > 0
+            ) {
 
-            } else if (totalPnl < 0) {
+                dayElement.classList.add(
+                    "profit"
+                );
 
-                dayElement.classList.add("loss");
+            } else if (
+                totalPnl < 0
+            ) {
+
+                dayElement.classList.add(
+                    "loss"
+                );
             }
         }
 
@@ -489,12 +822,22 @@ function renderCalendar() {
         let pnlText = "";
 
 
-        if (dayTrades.length > 0) {
+        if (
+            dayTrades.length > 0
+        ) {
 
             pnlText =
                 totalPnl > 0
-                    ? "+" + totalPnl + " ₽"
-                    : totalPnl + " ₽";
+                    ? "+" +
+                      formatNumber(
+                          totalPnl
+                      ) +
+                      " ₽"
+
+                    : formatNumber(
+                        totalPnl
+                      ) +
+                      " ₽";
         }
 
 
@@ -511,30 +854,37 @@ function renderCalendar() {
         `;
 
 
-        dayElement.onclick = function () {
+        dayElement.onclick =
+            function () {
 
-            showDayTrades(
-                dateString,
-                day
-            );
-        };
+                showDayTrades(
+                    dateString,
+                    day
+                );
+            };
 
 
-        calendar.appendChild(dayElement);
+        calendar.appendChild(
+            dayElement
+        );
     }
 }
 
 
-/* =========================
-   ПЕРЕКЛЮЧЕНИЕ МЕСЯЦА
-========================= */
+// =========================================
+// CHANGE MONTH
+// =========================================
 
 function changeMonth(step) {
 
     currentCalendarDate =
         new Date(
-            currentCalendarDate.getFullYear(),
-            currentCalendarDate.getMonth() + step,
+            currentCalendarDate
+                .getFullYear(),
+
+            currentCalendarDate
+                .getMonth() + step,
+
             1
         );
 
@@ -542,14 +892,15 @@ function changeMonth(step) {
     renderCalendar();
 
 
-    document.getElementById("dayTrades")
+    document
+        .getElementById("dayTrades")
         .classList.add("hidden");
 }
 
 
-/* =========================
-   ДАТА
-========================= */
+// =========================================
+// DATE FORMAT
+// =========================================
 
 function formatDate(
     year,
@@ -560,16 +911,43 @@ function formatDate(
     return (
         year +
         "-" +
-        String(month).padStart(2, "0") +
+        String(month).padStart(
+            2,
+            "0"
+        ) +
         "-" +
-        String(day).padStart(2, "0")
+        String(day).padStart(
+            2,
+            "0"
+        )
     );
 }
 
 
-/* =========================
-   СДЕЛКИ ЗА ДЕНЬ
-========================= */
+// =========================================
+// LOCAL TODAY
+// =========================================
+
+function getLocalDateString() {
+
+    const date =
+        new Date();
+
+
+    return formatDate(
+
+        date.getFullYear(),
+
+        date.getMonth() + 1,
+
+        date.getDate()
+    );
+}
+
+
+// =========================================
+// DAY TRADES
+// =========================================
 
 function showDayTrades(
     dateString,
@@ -577,35 +955,49 @@ function showDayTrades(
 ) {
 
     const container =
-        document.getElementById("dayTrades");
+        document.getElementById(
+            "dayTrades"
+        );
+
 
     const title =
-        document.getElementById("selectedDayTitle");
+        document.getElementById(
+            "selectedDayTitle"
+        );
+
 
     const list =
-        document.getElementById("selectedDayList");
+        document.getElementById(
+            "selectedDayList"
+        );
 
 
     const dayTrades =
         trades.filter(
             trade =>
-                trade.trade_date === dateString
+                trade.trade_date ===
+                dateString
         );
 
 
     title.textContent =
-        "Сделки · " + day;
+        "Сделки · " +
+        day;
 
 
     list.innerHTML = "";
 
 
-    if (dayTrades.length === 0) {
+    if (
+        dayTrades.length === 0
+    ) {
 
         list.innerHTML = `
+
             <div class="empty">
                 Сделок в этот день нет
             </div>
+
         `;
 
     } else {
@@ -614,25 +1006,34 @@ function showDayTrades(
             trade => {
 
                 list.appendChild(
-                    createTradeCard(trade)
+                    createTradeCard(
+                        trade
+                    )
                 );
             }
         );
     }
 
 
-    container.classList.remove("hidden");
+    container.classList.remove(
+        "hidden"
+    );
 }
 
 
-/* =========================
-   КАРТОЧКА СДЕЛКИ
-========================= */
+// =========================================
+// TRADE CARD
+// =========================================
 
-function createTradeCard(trade) {
+function createTradeCard(
+    trade
+) {
 
     const item =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     item.className = "card";
 
@@ -643,8 +1044,12 @@ function createTradeCard(trade) {
 
     const pnlText =
         pnl > 0
-            ? "+" + pnl + " ₽"
-            : pnl + " ₽";
+            ? "+" +
+              formatNumber(pnl) +
+              " ₽"
+
+            : formatNumber(pnl) +
+              " ₽";
 
 
     item.innerHTML = `
@@ -659,7 +1064,7 @@ function createTradeCard(trade) {
             ${trade.symbol}
         </strong>
 
-        <div style="margin-top: 8px;">
+        <div>
             ${trade.direction}
             ·
             <b>
@@ -670,43 +1075,57 @@ function createTradeCard(trade) {
     `;
 
 
-    item.onclick = function () {
+    item.onclick =
+        function () {
 
-        openTradeDetails(trade);
-    };
+            openTradeDetails(
+                trade
+            );
+        };
 
 
     return item;
 }
 
 
-/* =========================
-   ПРОФИЛЬ
-========================= */
+// =========================================
+// PROFILE
+// =========================================
 
 function updateProfile() {
 
     const today =
-        new Date().toISOString().split("T")[0];
+        getLocalDateString();
 
 
     const todayPnl =
         trades
             .filter(
                 trade =>
-                    trade.trade_date === today
+                    trade.trade_date ===
+                    today
             )
             .reduce(
-                (sum, trade) =>
-                    sum + Number(trade.pnl),
+                (
+                    sum,
+                    trade
+                ) =>
+                    sum +
+                    Number(trade.pnl),
+
                 0
             );
 
 
     const totalPnl =
         trades.reduce(
-            (sum, trade) =>
-                sum + Number(trade.pnl),
+            (
+                sum,
+                trade
+            ) =>
+                sum +
+                Number(trade.pnl),
+
             0
         );
 
@@ -727,127 +1146,584 @@ function updateProfile() {
 
     const winRate =
         trades.length > 0
+
             ? Math.round(
-                wins / trades.length * 100
+                wins /
+                trades.length *
+                100
             )
+
             : 0;
 
 
-    document.getElementById(
-        "profileTodayPnl"
-    ).textContent =
-        formatPnl(todayPnl);
-
-
-    document.getElementById(
-        "profileTotalPnl"
-    ).textContent =
-        formatPnl(totalPnl);
-
-
-    document.getElementById(
-        "profileTrades"
-    ).textContent =
-        trades.length;
-
-
-    document.getElementById(
-        "profileWins"
-    ).textContent =
-        wins;
-
-
-    document.getElementById(
-        "profileLosses"
-    ).textContent =
-        losses;
-
-
-    document.getElementById(
-        "profileWinRate"
-    ).textContent =
-        winRate + "%";
-
-
-    renderProfileTrades();
-}
-
-
-/* =========================
-   ВСЕ СДЕЛКИ В ПРОФИЛЕ
-========================= */
-
-function renderProfileTrades() {
-
-    const list =
+    const todayElement =
         document.getElementById(
-            "profileTradesList"
+            "profileTodayPnl"
         );
 
 
-    if (!list) return;
+    const totalElement =
+        document.getElementById(
+            "profileTotalPnl"
+        );
 
 
-    list.innerHTML = "";
+    const tradesElement =
+        document.getElementById(
+            "profileTrades"
+        );
 
 
-    if (trades.length === 0) {
+    const winsElement =
+        document.getElementById(
+            "profileWins"
+        );
 
-        list.innerHTML = `
-            <div class="empty">
-                Сделок пока нет
-            </div>
-        `;
 
-        return;
+    const lossesElement =
+        document.getElementById(
+            "profileLosses"
+        );
+
+
+    const winRateElement =
+        document.getElementById(
+            "profileWinRate"
+        );
+
+
+    if (todayElement) {
+
+        todayElement.textContent =
+            formatPnl(todayPnl);
     }
 
 
-    trades.forEach(
+    if (totalElement) {
+
+        totalElement.textContent =
+            formatPnl(totalPnl);
+    }
+
+
+    if (tradesElement) {
+
+        tradesElement.textContent =
+            trades.length;
+    }
+
+
+    if (winsElement) {
+
+        winsElement.textContent =
+            wins;
+    }
+
+
+    if (lossesElement) {
+
+        lossesElement.textContent =
+            losses;
+    }
+
+
+    if (winRateElement) {
+
+        winRateElement.textContent =
+            winRate + "%";
+    }
+
+
+    // UPDATE CURRENCY SELECT
+
+    const currencySelect =
+        document.getElementById(
+            "currencySelect"
+        );
+
+
+    if (currencySelect) {
+
+        currencySelect.value =
+            currentCurrency;
+    }
+
+
+    // UPDATE EXCHANGE RATE INFO
+
+    updateExchangeRateInfo();
+}
+
+
+// =========================================
+// ALL TRADES PAGE
+// =========================================
+
+function setTradePeriod(
+    period
+) {
+
+    selectedPeriod =
+        period;
+
+
+    updatePeriodButtons();
+
+    renderAllTrades();
+}
+
+
+// =========================================
+// PERIOD BUTTONS
+// =========================================
+
+function updatePeriodButtons() {
+
+    document
+        .querySelectorAll(
+            ".period-button"
+        )
+        .forEach(
+            button => {
+
+                button.classList.remove(
+                    "active"
+                );
+
+
+                if (
+                    button.dataset.period ===
+                    selectedPeriod
+                ) {
+
+                    button.classList.add(
+                        "active"
+                    );
+                }
+            }
+        );
+}
+
+
+// =========================================
+// FILTER TRADES BY PERIOD
+// =========================================
+
+function getFilteredTrades() {
+
+    if (
+        selectedPeriod ===
+        "all"
+    ) {
+
+        return [
+            ...trades
+        ];
+    }
+
+
+    const today =
+        new Date();
+
+
+    today.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+
+    const startDate =
+        new Date(today);
+
+
+    if (
+        selectedPeriod ===
+        "today"
+    ) {
+
+        // Сегодня
+
+    } else if (
+        selectedPeriod ===
+        "week"
+    ) {
+
+        startDate.setDate(
+            today.getDate() - 6
+        );
+
+    } else if (
+        selectedPeriod ===
+        "month"
+    ) {
+
+        startDate.setDate(
+            today.getDate() - 29
+        );
+    }
+
+
+    const startString =
+        formatDate(
+
+            startDate
+                .getFullYear(),
+
+            startDate
+                .getMonth() + 1,
+
+            startDate
+                .getDate()
+        );
+
+
+    const todayString =
+        getLocalDateString();
+
+
+    return trades.filter(
         trade => {
 
-            list.appendChild(
-                createTradeCard(trade)
+            return (
+                trade.trade_date >=
+                startString &&
+
+                trade.trade_date <=
+                todayString
             );
         }
     );
 }
 
 
-/* =========================
-   ФОРМАТ ПРОФИТА
-========================= */
+// =========================================
+// RENDER ALL TRADES
+// =========================================
 
-function formatPnl(value) {
+function renderAllTrades() {
 
-    const number =
-        Number(value);
+    const list =
+        document.getElementById(
+            "allTradesList"
+        );
 
 
-    if (number > 0) {
+    const periodPnl =
+        document.getElementById(
+            "periodPnl"
+        );
 
-        return "+" +
-            number.toLocaleString("ru-RU") +
-            " ₽";
+
+    const periodTrades =
+        document.getElementById(
+            "periodTrades"
+        );
+
+
+    const periodWinRate =
+        document.getElementById(
+            "periodWinRate"
+        );
+
+
+    const periodTitle =
+        document.getElementById(
+            "periodTitle"
+        );
+
+
+    if (
+        !list ||
+        !periodPnl ||
+        !periodTrades ||
+        !periodWinRate ||
+        !periodTitle
+    ) {
+        return;
     }
 
 
-    return (
-        number.toLocaleString("ru-RU") +
-        " ₽"
+    const filteredTrades =
+        getFilteredTrades();
+
+
+    const totalPnl =
+        filteredTrades.reduce(
+            (
+                sum,
+                trade
+            ) =>
+                sum +
+                Number(trade.pnl),
+
+            0
+        );
+
+
+    const wins =
+        filteredTrades.filter(
+            trade =>
+                Number(trade.pnl) > 0
+        ).length;
+
+
+    const winRate =
+        filteredTrades.length > 0
+
+            ? Math.round(
+                wins /
+                filteredTrades.length *
+                100
+            )
+
+            : 0;
+
+
+    periodPnl.textContent =
+        formatPnl(totalPnl);
+
+
+    periodTrades.textContent =
+        filteredTrades.length;
+
+
+    periodWinRate.textContent =
+        winRate + "%";
+
+
+    // PERIOD TITLE
+
+    if (
+        selectedPeriod ===
+        "today"
+    ) {
+
+        periodTitle.textContent =
+            "Профит сегодня";
+
+    } else if (
+        selectedPeriod ===
+        "week"
+    ) {
+
+        periodTitle.textContent =
+            "Профит за 7 дней";
+
+    } else if (
+        selectedPeriod ===
+        "month"
+    ) {
+
+        periodTitle.textContent =
+            "Профит за 30 дней";
+
+    } else {
+
+        periodTitle.textContent =
+            "Профит за всё время";
+    }
+
+
+    // LIST
+
+    list.innerHTML = "";
+
+
+    if (
+        filteredTrades.length ===
+        0
+    ) {
+
+        list.innerHTML = `
+
+            <div class="empty">
+                Сделок за этот период нет
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    filteredTrades.forEach(
+        trade => {
+
+            list.appendChild(
+                createTradeCard(
+                    trade
+                )
+            );
+        }
     );
 }
 
 
-/* =========================
-   ДАТА ДЛЯ ОТОБРАЖЕНИЯ
-========================= */
+async function fetchExchangeRates() {
+
+    try {
+
+        // Получаем курсы рубля к доллару и евро
+        const response =
+            await fetch(
+                "https://api.exchangerate.host/latest?base=RUB&symbols=USD,EUR"
+            );
+
+
+        if (!response.ok) {
+
+            console.error(
+                "Ошибка API:",
+                response.statusText
+            );
+
+            return false;
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.rates) {
+
+            console.error(
+                "Неправильный формат данных"
+            );
+
+            return false;
+        }
+
+
+        // Инвертируем курсы (если 1 RUB = 0.01 USD, то 1 USD = 100 RUB)
+        exchangeRates.USD =
+            1 / data.rates.USD;
+
+        exchangeRates.EUR =
+            1 / data.rates.EUR;
+
+
+        // Сохраняем время обновления
+        lastRatesUpdate =
+            new Date();
+
+
+        // Сохраняем в localStorage
+        saveExchangeRates();
+
+        localStorage.setItem(
+            "lastRatesUpdate",
+            lastRatesUpdate.toISOString()
+        );
+
+
+        console.log(
+            "Курсы обновлены:",
+            exchangeRates
+        );
+
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            "Ошибка при получении курсов:",
+            error
+        );
+
+        return false;
+    }
+}
+
+function convertCurrency(
+    amountInRubles,
+    toCurrency = currentCurrency
+) {
+
+    const rate =
+        exchangeRates[toCurrency];
+
+
+    if (!rate) {
+        return amountInRubles;
+    }
+
+
+    return amountInRubles / rate;
+}
+
+
+// =========================================
+// FORMAT PNL
+// =========================================
+
+function formatPnl(
+    value
+) {
+
+    const numberInRubles =
+        Number(value);
+
+    const converted =
+        convertCurrency(
+            numberInRubles,
+            currentCurrency
+        );
+
+    const symbol =
+        currencyData[currentCurrency].symbol;
+
+
+    if (
+        numberInRubles > 0
+    ) {
+
+        return (
+            "+" +
+            formatNumber(converted) +
+            " " +
+            symbol
+        );
+    }
+
+
+    return (
+        formatNumber(converted) +
+        " " +
+        symbol
+    );
+}
+
+
+// =========================================
+// FORMAT NUMBER
+// =========================================
+
+function formatNumber(
+    value
+) {
+
+    return Number(value)
+        .toLocaleString(
+            "ru-RU"
+        );
+}
+
+
+// =========================================
+// READABLE DATE
+// =========================================
 
 function formatReadableDate(
     dateString
 ) {
 
-    if (!dateString) return "—";
+    if (!dateString) {
+        return "—";
+    }
 
 
     const parts =
@@ -857,8 +1733,10 @@ function formatReadableDate(
     const year =
         Number(parts[0]);
 
+
     const month =
         Number(parts[1]);
+
 
     const day =
         Number(parts[2]);
@@ -892,99 +1770,137 @@ function formatReadableDate(
 }
 
 
-/* =========================
-   ДЕТАЛИ СДЕЛКИ
-========================= */
+// =========================================
+// TRADE DETAILS
+// =========================================
 
-function openTradeDetails(trade) {
+function openTradeDetails(
+    trade
+) {
 
-    selectedTrade = trade;
+    selectedTrade =
+        trade;
 
 
-    document.getElementById("homePage")
+    document
+        .getElementById("homePage")
         .classList.add("hidden");
 
-    document.getElementById("profilePage")
+
+    document
+        .getElementById("profilePage")
         .classList.add("hidden");
 
-    document.getElementById("tradePage")
+
+    document
+        .getElementById("allTradesPage")
         .classList.add("hidden");
 
-    document.getElementById("tradeDetails")
+
+    document
+        .getElementById("tradePage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("tradeDetails")
         .classList.remove("hidden");
 
 
-    document.getElementById(
-        "detailsSymbol"
-    ).textContent =
+    document
+        .getElementById(
+            "detailsSymbol"
+        )
+        .textContent =
         trade.symbol;
 
 
-    document.getElementById(
-        "detailsDate"
-    ).textContent =
+    document
+        .getElementById(
+            "detailsDate"
+        )
+        .textContent =
         formatReadableDate(
             trade.trade_date
         );
 
 
-    document.getElementById(
-        "detailsDirection"
-    ).textContent =
+    document
+        .getElementById(
+            "detailsDirection"
+        )
+        .textContent =
         trade.direction;
 
 
-    document.getElementById(
-        "detailsEntry"
-    ).textContent =
+    document
+        .getElementById(
+            "detailsEntry"
+        )
+        .textContent =
         trade.entry ?? "—";
 
 
-    document.getElementById(
-        "detailsExit"
-    ).textContent =
+    document
+        .getElementById(
+            "detailsExit"
+        )
+        .textContent =
         trade.exit ?? "—";
 
 
-    document.getElementById(
-        "detailsStopLoss"
-    ).textContent =
+    document
+        .getElementById(
+            "detailsStopLoss"
+        )
+        .textContent =
         trade.stop_loss ?? "—";
 
 
-    document.getElementById(
-        "detailsTakeProfit"
-    ).textContent =
+    document
+        .getElementById(
+            "detailsTakeProfit"
+        )
+        .textContent =
         trade.take_profit ?? "—";
 
 
-    document.getElementById(
-        "detailsPnl"
-    ).textContent =
-        formatPnl(trade.pnl);
+    document
+        .getElementById(
+            "detailsPnl"
+        )
+        .textContent =
+        formatPnl(
+            trade.pnl
+        );
 
 
-    document.getElementById(
-        "detailsComment"
-    ).textContent =
-        trade.comment || "—";
+    document
+        .getElementById(
+            "detailsComment"
+        )
+        .textContent =
+        trade.comment ||
+        "—";
 }
 
 
-/* =========================
-   НАЗАД ИЗ ДЕТАЛЕЙ
-========================= */
+// =========================================
+// CLOSE TRADE DETAILS
+// =========================================
 
 function closeTradeDetails() {
 
     selectedTrade = null;
 
 
-    document.getElementById("tradeDetails")
+    document
+        .getElementById("tradeDetails")
         .classList.add("hidden");
 
 
-    document.getElementById("homePage")
+    document
+        .getElementById("homePage")
         .classList.remove("hidden");
 
 
@@ -992,71 +1908,76 @@ function closeTradeDetails() {
 }
 
 
-/* =========================
-   РЕДАКТИРОВАНИЕ
-========================= */
+// =========================================
+// EDIT TRADE
+// =========================================
 
 function editTrade() {
 
-    if (!selectedTrade) return;
+    if (!selectedTrade) {
+        return;
+    }
 
 
-    document.getElementById(
-        "tradeDetails"
-    ).classList.add("hidden");
+    document
+        .getElementById("tradeDetails")
+        .classList.add("hidden");
 
 
-    document.getElementById(
-        "tradePage"
-    ).classList.remove("hidden");
+    document
+        .getElementById("tradePage")
+        .classList.remove("hidden");
 
 
-    document.getElementById(
-        "formTitle"
-    ).textContent =
+    document
+        .getElementById("formTitle")
+        .textContent =
         "Изменить сделку";
 
 
-    document.getElementById(
-        "symbol"
-    ).value =
+    document
+        .getElementById("symbol")
+        .value =
         selectedTrade.symbol;
 
 
-    document.getElementById(
-        "entry"
-    ).value =
+    document
+        .getElementById("entry")
+        .value =
         selectedTrade.entry;
 
 
-    document.getElementById(
-        "exit"
-    ).value =
+    document
+        .getElementById("exit")
+        .value =
         selectedTrade.exit;
 
 
-    document.getElementById(
-        "stopLoss"
-    ).value =
-        selectedTrade.stop_loss || "";
+    document
+        .getElementById("stopLoss")
+        .value =
+        selectedTrade.stop_loss ||
+        "";
 
 
-    document.getElementById(
-        "takeProfit"
-    ).value =
-        selectedTrade.take_profit || "";
+    document
+        .getElementById("takeProfit")
+        .value =
+        selectedTrade.take_profit ||
+        "";
 
 
-    document.getElementById(
-        "pnl"
-    ).value =
+    document
+        .getElementById("pnl")
+        .value =
         selectedTrade.pnl;
 
 
-    document.getElementById(
-        "comment"
-    ).value =
-        selectedTrade.comment || "";
+    document
+        .getElementById("comment")
+        .value =
+        selectedTrade.comment ||
+        "";
 
 
     setDirection(
@@ -1079,40 +2000,67 @@ function editTrade() {
 }
 
 
-/* =========================
-   ОБНОВЛЕНИЕ СДЕЛКИ
-========================= */
+// =========================================
+// UPDATE TRADE
+// =========================================
 
 async function updateTrade() {
 
-    if (!selectedTrade) return;
+    if (!selectedTrade) {
+        return;
+    }
 
 
     const symbol =
-        document.getElementById("symbol")
-            .value.trim();
+        document
+            .getElementById("symbol")
+            .value
+            .trim();
+
 
     const entry =
-        document.getElementById("entry").value;
+        document
+            .getElementById("entry")
+            .value;
+
 
     const exit =
-        document.getElementById("exit").value;
+        document
+            .getElementById("exit")
+            .value;
+
 
     const stopLoss =
-        document.getElementById("stopLoss").value;
+        document
+            .getElementById("stopLoss")
+            .value;
+
 
     const takeProfit =
-        document.getElementById("takeProfit").value;
+        document
+            .getElementById("takeProfit")
+            .value;
+
 
     const pnl =
-        document.getElementById("pnl").value;
+        document
+            .getElementById("pnl")
+            .value;
+
 
     const comment =
-        document.getElementById("comment")
-            .value.trim();
+        document
+            .getElementById("comment")
+            .value
+            .trim();
 
 
-    if (!symbol || !entry || !exit || !pnl) {
+    if (
+        !symbol ||
+        !entry ||
+        !exit ||
+        !pnl
+    ) {
 
         alert(
             "Заполни обязательные поля."
@@ -1188,23 +2136,25 @@ async function updateTrade() {
     await loadTrades();
 
 
-    document.getElementById(
-        "tradePage"
-    ).classList.add("hidden");
+    document
+        .getElementById("tradePage")
+        .classList.add("hidden");
 
 
-    document.getElementById(
-        "homePage"
-    ).classList.remove("hidden");
+    document
+        .getElementById("homePage")
+        .classList.remove("hidden");
 
 
-    alert("Сделка изменена!");
+    alert(
+        "Сделка изменена!"
+    );
 }
 
 
-/* =========================
-   ВОССТАНОВИТЬ КНОПКУ
-========================= */
+// =========================================
+// RESET SAVE BUTTON
+// =========================================
 
 function resetSaveButton() {
 
@@ -1214,7 +2164,9 @@ function resetSaveButton() {
         );
 
 
-    if (!saveButton) return;
+    if (!saveButton) {
+        return;
+    }
 
 
     saveButton.textContent =
@@ -1226,13 +2178,15 @@ function resetSaveButton() {
 }
 
 
-/* =========================
-   УДАЛЕНИЕ
-========================= */
+// =========================================
+// DELETE TRADE
+// =========================================
 
 async function deleteTrade() {
 
-    if (!selectedTrade) return;
+    if (!selectedTrade) {
+        return;
+    }
 
 
     const confirmed =
@@ -1241,7 +2195,9 @@ async function deleteTrade() {
         );
 
 
-    if (!confirmed) return;
+    if (!confirmed) {
+        return;
+    }
 
 
     const {
@@ -1277,22 +2233,319 @@ async function deleteTrade() {
     await loadTrades();
 
 
-    document.getElementById(
-        "tradeDetails"
-    ).classList.add("hidden");
+    document
+        .getElementById("tradeDetails")
+        .classList.add("hidden");
 
 
-    document.getElementById(
-        "homePage"
-    ).classList.remove("hidden");
+    document
+        .getElementById("homePage")
+        .classList.remove("hidden");
 
 
-    alert("Сделка удалена!");
+    alert(
+        "Сделка удалена!"
+    );
 }
 
 
-/* =========================
-   ЗАПУСК
-========================= */
+// =========================================
+// CURRENCY FUNCTIONS
+// =========================================
+
+function loadCurrency() {
+
+    const saved =
+        localStorage.getItem(
+            "tradingCurrency"
+        );
+
+
+    if (saved && currencyData[saved]) {
+
+        currentCurrency = saved;
+    }
+
+
+    const select =
+        document.getElementById(
+            "currencySelect"
+        );
+
+
+    if (select) {
+
+        select.value = currentCurrency;
+    }
+}
+
+
+function saveExchangeRates() {
+
+    localStorage.setItem(
+        "exchangeRates",
+        JSON.stringify(exchangeRates)
+    );
+}
+
+
+function loadExchangeRates() {
+
+    const saved =
+        localStorage.getItem(
+            "exchangeRates"
+        );
+
+
+    if (saved) {
+
+        try {
+
+            const rates =
+                JSON.parse(saved);
+
+            Object.assign(
+                exchangeRates,
+                rates
+            );
+
+        } catch (e) {
+
+            console.log(
+                "Ошибка загрузки курсов"
+            );
+        }
+    }
+
+
+    const savedTime =
+        localStorage.getItem(
+            "lastRatesUpdate"
+        );
+
+
+    if (savedTime) {
+
+        lastRatesUpdate =
+            new Date(savedTime);
+    }
+}
+
+
+function setCurrency(code) {
+
+    if (!currencyData[code]) {
+        return;
+    }
+
+
+    currentCurrency = code;
+
+
+    localStorage.setItem(
+        "tradingCurrency",
+        code
+    );
+
+
+    updateProfile();
+
+    renderCalendar();
+
+    renderAllTrades();
+}
+
+
+function handleCurrencyChange() {
+
+    const select =
+        document.getElementById(
+            "currencySelect"
+        );
+
+
+    if (select) {
+
+        setCurrency(select.value);
+    }
+}
+
+
+function setExchangeRate(
+    currency,
+    rate
+) {
+
+    if (!currencyData[currency]) {
+        return;
+    }
+
+
+    exchangeRates[currency] = rate;
+
+    saveExchangeRates();
+
+    updateExchangeRateInfo();
+
+    updateProfile();
+
+    renderCalendar();
+
+    renderAllTrades();
+}
+
+
+async function updateRatesFromAPI() {
+
+    const btn =
+        document.getElementById(
+            "updateRatesBtn"
+        );
+
+
+    if (btn) {
+
+        btn.disabled = true;
+
+        btn.textContent =
+            "Загрузка...";
+    }
+
+
+    const success =
+        await fetchExchangeRates();
+
+
+    if (success) {
+
+        updateExchangeRateInfo();
+
+        updateProfile();
+
+        renderCalendar();
+
+        renderAllTrades();
+
+
+        if (btn) {
+
+            btn.textContent =
+                "✓ Обновлено!";
+
+            setTimeout(() => {
+
+                btn.textContent =
+                    "Обновить курс";
+
+                btn.disabled = false;
+
+            }, 2000);
+        }
+
+    } else {
+
+        if (btn) {
+
+            btn.textContent =
+                "✗ Ошибка";
+
+            setTimeout(() => {
+
+                btn.textContent =
+                    "Обновить курс";
+
+                btn.disabled = false;
+
+            }, 2000);
+        }
+    }
+}
+
+
+function updateExchangeRateInfo() {
+
+    const rateInfo =
+        document.getElementById(
+            "exchangeRateInfo"
+        );
+
+
+    if (!rateInfo) {
+        return;
+    }
+
+
+    const usdRate =
+        Math.round(
+            exchangeRates.USD * 100
+        ) / 100;
+
+    const eurRate =
+        Math.round(
+            exchangeRates.EUR * 100
+        ) / 100;
+
+
+    let timeText = "Никогда";
+
+
+    if (lastRatesUpdate) {
+
+        const now =
+            new Date();
+
+        const diff =
+            now - lastRatesUpdate;
+
+        const minutes =
+            Math.floor(
+                diff / 60000
+            );
+
+        const hours =
+            Math.floor(
+                diff / 3600000
+            );
+
+        const days =
+            Math.floor(
+                diff / 86400000
+            );
+
+
+        if (minutes < 1) {
+
+            timeText = "Только что";
+
+        } else if (minutes < 60) {
+
+            timeText =
+                minutes + " мин. назад";
+
+        } else if (hours < 24) {
+
+            timeText =
+                hours + " ч. назад";
+
+        } else {
+
+            timeText =
+                days + " дн. назад";
+        }
+    }
+
+
+    rateInfo.innerHTML = `
+        <div>Курс: 1 $ = ${usdRate} ₽ | 1 € = ${eurRate} ₽</div>
+        <div style="margin-top: 6px; color: #3a3d43; font-size: 9px;">
+            Обновлено: ${timeText}
+        </div>
+    `;
+}
+
+
+// =========================================
+// START
+// =========================================
 
 init();
