@@ -14,8 +14,42 @@
 
 <div class="app">
 
+    <!-- ВХОД -->
+    <div id="authPage" class="hidden">
+
+        <h1>Humble</h1>
+        <p class="subtitle">Войдите по email, чтобы сделки не терялись при смене браузера или устройства</p>
+
+        <div class="form">
+
+            <label>Email</label>
+
+            <input
+                id="authEmail"
+                type="email"
+                placeholder="you@example.com"
+            >
+
+            <button
+                id="authSendButton"
+                class="save-button"
+                onclick="sendLoginLink()">
+                Получить ссылку для входа
+            </button>
+
+            <p id="authStatus" class="auth-status hidden"></p>
+
+            <button class="guest-button" onclick="continueAsGuest()">
+                Продолжить без входа
+            </button>
+
+        </div>
+
+    </div>
+
+
     <!-- ГЛАВНАЯ -->
-    <div id="homePage">
+    <div id="homePage" class="hidden">
 
         <h1>Humble</h1>
         <p class="subtitle">Мой торговый журнал</p>
@@ -91,6 +125,35 @@
                     🔄 Обновить курс
                 </button>
             </div>
+        </div>
+
+        <div class="account-section">
+
+            <label>Email для входа</label>
+
+            <div class="account-row">
+                <span id="accountEmailStatus">Не привязан</span>
+            </div>
+
+            <div id="accountLinkForm" class="account-link-form">
+
+                <input
+                    id="linkEmailInput"
+                    type="email"
+                    placeholder="you@example.com"
+                >
+
+                <button
+                    id="linkEmailButton"
+                    class="update-rates-button"
+                    onclick="linkEmail()">
+                    Привязать email
+                </button>
+
+            </div>
+
+            <p id="accountStatus" class="auth-status hidden"></p>
+
         </div>
 
         <div class="profile-stat">
@@ -452,4 +515,4 @@
 <script src="app.js"></script>
 
 </body>
-</html>ы
+</html>

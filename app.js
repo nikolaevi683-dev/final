@@ -55,49 +55,291 @@ const exchangeRates = {
 // INIT
 // =========================================
 
-async function init() {
+// =========================================
+// AUTH
+// =========================================
 
-    const {
-        data: { session }
-    } = await db.auth.getSession();
+let appStarted = false;
 
+db.auth.onAuthStateChange(
+    (event, session) => {
 
-    if (!session) {
+        if (session && !appStarted) {
 
-        const {
-            data,
-            error
-        } = await db.auth.signInAnonymously();
+            appStarted = true;
 
+            document
+                .getElementById("authPage")
+                .classList.add("hidden");
 
-        if (error) {
-
-            console.error(
-                "Auth error:",
-                error
-            );
-
-            alert(
-                "Ошибка подключения к аккаунту"
-            );
+            startApp();
 
             return;
         }
 
 
-        console.log(
-            "Пользователь подключен:",
-            data.user.id
+        if (!session && !appStarted) {
+
+            document
+                .getElementById("homePage")
+                .classList.add("hidden");
+
+            document
+                .getElementById("authPage")
+                .classList.remove("hidden");
+        }
+    }
+);
+
+
+async function sendLoginLink() {
+
+    const email =
+        document
+            .getElementById("authEmail")
+            .value
+            .trim();
+
+
+    if (!email) {
+
+        showAuthStatus(
+            "authStatus",
+            "Введите email",
+            true
+        );
+
+        return;
+    }
+
+
+    const button =
+        document.getElementById(
+            "authSendButton"
+        );
+
+    button.disabled = true;
+
+    button.textContent =
+        "Отправляем...";
+
+
+    const { error } =
+        await db.auth.signInWithOtp({
+            email,
+            options: {
+                emailRedirectTo:
+                    window.location.href
+            }
+        });
+
+
+    button.disabled = false;
+
+    button.textContent =
+        "Получить ссылку для входа";
+
+
+    if (error) {
+
+        console.error(
+            "Login link error:",
+            error
+        );
+
+        showAuthStatus(
+            "authStatus",
+            "Не удалось отправить ссылку: " +
+                error.message,
+            true
+        );
+
+        return;
+    }
+
+
+    showAuthStatus(
+        "authStatus",
+        "Ссылка отправлена на " +
+            email +
+            ". Откройте её с этого устройства."
+    );
+}
+
+
+async function continueAsGuest() {
+
+    document
+        .getElementById("authPage")
+        .classList.add("hidden");
+
+
+    const { error } =
+        await db.auth.signInAnonymously();
+
+
+    if (error) {
+
+        console.error(
+            "Auth error:",
+            error
+        );
+
+        alert(
+            "Ошибка подключения к аккаунту"
+        );
+    }
+}
+
+
+async function linkEmail() {
+
+    const email =
+        document
+            .getElementById("linkEmailInput")
+            .value
+            .trim();
+
+
+    if (!email) {
+
+        showAuthStatus(
+            "accountStatus",
+            "Введите email",
+            true
+        );
+
+        return;
+    }
+
+
+    const button =
+        document.getElementById(
+            "linkEmailButton"
+        );
+
+    button.disabled = true;
+
+    button.textContent =
+        "Отправляем...";
+
+
+    const { error } =
+        await db.auth.updateUser({
+            email
+        });
+
+
+    button.disabled = false;
+
+    button.textContent =
+        "Привязать email";
+
+
+    if (error) {
+
+        console.error(
+            "Link email error:",
+            error
+        );
+
+        showAuthStatus(
+            "accountStatus",
+            "Не удалось привязать: " +
+                error.message,
+            true
+        );
+
+        return;
+    }
+
+
+    showAuthStatus(
+        "accountStatus",
+        "Проверьте почту " +
+            email +
+            " и перейдите по ссылке, чтобы подтвердить."
+    );
+}
+
+
+function showAuthStatus(
+    elementId,
+    message,
+    isError
+) {
+
+    const element =
+        document.getElementById(
+            elementId
+        );
+
+    element.textContent = message;
+
+    element.classList.remove(
+        "hidden"
+    );
+
+    element.classList.toggle(
+        "error",
+        Boolean(isError)
+    );
+}
+
+
+async function updateAccountSection() {
+
+    const {
+        data: { user }
+    } = await db.auth.getUser();
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const statusElement =
+        document.getElementById(
+            "accountEmailStatus"
+        );
+
+    const formElement =
+        document.getElementById(
+            "accountLinkForm"
+        );
+
+
+    if (user.email) {
+
+        statusElement.textContent =
+            user.email;
+
+        formElement.classList.add(
+            "hidden"
         );
 
     } else {
 
-        console.log(
-            "Существующий пользователь:",
-            session.user.id
+        statusElement.textContent =
+            "Не привязан";
+
+        formElement.classList.remove(
+            "hidden"
         );
     }
+}
 
+
+// =========================================
+// INIT
+// =========================================
+
+async function startApp() {
+
+    console.log(
+        "Пользователь подключен"
+    );
 
     loadExchangeRates();
 
@@ -119,6 +361,12 @@ async function init() {
     renderCalendar();
 
     updateProfile();
+
+    updateAccountSection();
+
+    document
+        .getElementById("homePage")
+        .classList.remove("hidden");
 }
 
 
@@ -2653,4 +2901,6 @@ function updateExchangeRateInfo() {
 // START
 // =========================================
 
-init();
+// Приложение стартует само: подписка onAuthStateChange выше
+// получает начальное состояние сессии сразу при регистрации
+// и вызывает startApp() или показывает экран входа.
