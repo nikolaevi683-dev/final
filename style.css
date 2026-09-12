@@ -39,15 +39,37 @@ body {
             rgba(255,255,255,.07),
             transparent 70%
         ),
+        url("background.svg"),
         linear-gradient(
             180deg,
             #090a0b 0%,
             #050505 65%
         );
 
+    background-repeat:
+        no-repeat,
+        no-repeat,
+        no-repeat;
+
+    background-size:
+        auto,
+        cover,
+        auto;
+
+    background-position:
+        center,
+        center top,
+        center;
+
+    background-attachment:
+        scroll,
+        fixed,
+        scroll;
+
     color: var(--white);
 
     font-family:
+        "Manrope",
         Inter,
         -apple-system,
         BlinkMacSystemFont,

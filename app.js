@@ -20,6 +20,10 @@ let direction = "LONG";
 
 let selectedTrade = null;
 
+let selectedCalendarDate = null;
+
+let formTradeDate = null;
+
 let currentCalendarDate = new Date();
 
 let selectedPeriod = "today";
@@ -101,10 +105,14 @@ async function init() {
 
     // Пытаемся обновить курсы с API при запуске
     // Но не блокируем приложение если API недоступен
-    fetchExchangeRates().then(() => {
+    maybeAutoUpdateRates();
 
-        updateExchangeRateInfo();
-    });
+    // Дополнительно проверяем раз в час, пока приложение открыто,
+    // не устарел ли курс (на случай если вкладка не перезагружается)
+    setInterval(
+        maybeAutoUpdateRates,
+        60 * 60 * 1000
+    );
 
     await loadTrades();
 
@@ -264,7 +272,7 @@ function closeAllTrades() {
 // TRADE FORM
 // =========================================
 
-function openTradeForm() {
+function openTradeForm(dateString) {
 
     document
         .getElementById("homePage")
@@ -291,9 +299,18 @@ function openTradeForm() {
         .classList.remove("hidden");
 
 
+    formTradeDate =
+        dateString ||
+        getLocalDateString();
+
+
     document
         .getElementById("formTitle")
-        .textContent = "Новая сделка";
+        .textContent =
+        "Новая сделка · " +
+        formatReadableDate(
+            formTradeDate
+        );
 
 
     clearForm();
@@ -318,6 +335,8 @@ function closeTradeForm() {
         .getElementById("formTitle")
         .textContent = "Новая сделка";
 
+
+    formTradeDate = null;
 
     clearForm();
 
@@ -468,6 +487,7 @@ async function saveTrade() {
             comment,
 
         trade_date:
+            formTradeDate ||
             getLocalDateString()
     };
 
@@ -499,6 +519,8 @@ async function saveTrade() {
 
     resetSaveButton();
 
+    formTradeDate = null;
+
     await loadTrades();
 
 
@@ -516,7 +538,6 @@ async function saveTrade() {
         "Сделка сохранена!"
     );
 }
-
 
 // =========================================
 // LOAD TRADES
@@ -573,6 +594,19 @@ async function loadTrades() {
     ) {
 
         renderAllTrades();
+    }
+
+
+    if (
+        selectedCalendarDate &&
+        !document
+            .getElementById("dayTrades")
+            .classList.contains("hidden")
+    ) {
+
+        showDayTrades(
+            selectedCalendarDate
+        );
     }
 }
 
@@ -895,6 +929,9 @@ function changeMonth(step) {
     document
         .getElementById("dayTrades")
         .classList.add("hidden");
+
+
+    selectedCalendarDate = null;
 }
 
 
@@ -953,6 +990,19 @@ function showDayTrades(
     dateString,
     day
 ) {
+
+    selectedCalendarDate =
+        dateString;
+
+
+    if (day === undefined) {
+
+        day =
+            Number(
+                dateString.split("-")[2]
+            );
+    }
+
 
     const container =
         document.getElementById(
@@ -1017,6 +1067,19 @@ function showDayTrades(
 
     container.classList.remove(
         "hidden"
+    );
+}
+
+
+// =========================================
+// ADD TRADE FOR SELECTED DAY
+// =========================================
+
+function addTradeForSelectedDay() {
+
+    openTradeForm(
+        selectedCalendarDate ||
+        getLocalDateString()
     );
 }
 
@@ -1561,14 +1624,53 @@ function renderAllTrades() {
 }
 
 
+// Автообновление курса, только если он "протух"
+// (не обновлялся более 6 часов или ещё ни разу не обновлялся)
+const RATES_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+async function maybeAutoUpdateRates() {
+
+    const isStale =
+        !lastRatesUpdate ||
+        (new Date() - lastRatesUpdate) > RATES_MAX_AGE_MS;
+
+
+    if (!isStale) {
+        return;
+    }
+
+
+    const success =
+        await fetchExchangeRates();
+
+
+    if (success) {
+
+        updateExchangeRateInfo();
+
+        updateProfile();
+
+        renderCalendar();
+
+        renderAllTrades();
+
+    } else {
+
+        updateExchangeRateInfo();
+    }
+}
+
+
 async function fetchExchangeRates() {
 
     try {
 
         // Получаем курсы рубля к доллару и евро
+        // (exchangerate.host теперь требует платный access_key,
+        // поэтому используем бесплатный open.er-api.com без ключа)
         const response =
             await fetch(
-                "https://api.exchangerate.host/latest?base=RUB&symbols=USD,EUR"
+                "https://open.er-api.com/v6/latest/RUB"
             );
 
 
@@ -1587,7 +1689,10 @@ async function fetchExchangeRates() {
             await response.json();
 
 
-        if (!data.rates) {
+        if (
+            data.result !== "success" ||
+            !data.rates
+        ) {
 
             console.error(
                 "Неправильный формат данных"
