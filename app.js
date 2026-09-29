@@ -341,6 +341,8 @@ async function startApp() {
         "Пользователь подключен"
     );
 
+    initTheme();
+
     loadExchangeRates();
 
     loadCurrency();
@@ -367,6 +369,79 @@ async function startApp() {
     document
         .getElementById("homePage")
         .classList.remove("hidden");
+
+    // Незаметно, в фоне, подтягиваем новые сделки из Т-Инвестиций при
+    // каждом входе в приложение — если брокер ещё не подключён или
+    // временно недоступен, просто тихо ничего не делаем (без сообщений
+    // об ошибке пользователю), чтобы не мешать обычному открытию приложения.
+    autoSyncTinkoffTrades();
+}
+
+
+async function autoSyncTinkoffTrades() {
+
+    try {
+
+        const {
+            data: { session }
+        } = await db.auth.getSession();
+
+        if (!session) return;
+
+        const res =
+            await fetch(
+                functionsUrl(
+                    "sync-tinkoff-trades"
+                ),
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        Authorization:
+                            "Bearer " +
+                            session.access_token
+                    },
+                    body: JSON.stringify({})
+                }
+            );
+
+        const result =
+            await res.json();
+
+        if (!res.ok) {
+            // Например, брокер ещё не подключён, или временная проблема
+            // сети/API брокера — молча пропускаем, это фоновая операция.
+            console.log(
+                "autoSyncTinkoffTrades: пропущено —",
+                result.error
+            );
+
+            return;
+        }
+
+        if (result.imported > 0) {
+
+            await loadTrades();
+
+            renderCalendar();
+
+            updateProfile();
+
+            showAuthStatus(
+                "tinkoffStatus",
+                "Импортировано новых сделок: " +
+                    result.imported
+            );
+        }
+
+    } catch (e) {
+
+        console.log(
+            "autoSyncTinkoffTrades error (проигнорировано):",
+            e
+        );
+    }
 }
 
 
@@ -402,12 +477,22 @@ function showHome() {
 
 
     document
+        .getElementById("settingsPage")
+        .classList.add("hidden");
+
+
+    document
         .getElementById("homeNav")
         .classList.add("active");
 
 
     document
         .getElementById("profileNav")
+        .classList.remove("active");
+
+
+    document
+        .getElementById("settingsNav")
         .classList.remove("active");
 
 
@@ -443,6 +528,11 @@ function showProfile() {
 
 
     document
+        .getElementById("settingsPage")
+        .classList.add("hidden");
+
+
+    document
         .getElementById("homeNav")
         .classList.remove("active");
 
@@ -452,7 +542,60 @@ function showProfile() {
         .classList.add("active");
 
 
+    document
+        .getElementById("settingsNav")
+        .classList.remove("active");
+
+
     updateProfile();
+}
+
+
+function showSettings() {
+
+    document
+        .getElementById("homePage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("profilePage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("allTradesPage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("tradePage")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("tradeDetails")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("settingsPage")
+        .classList.remove("hidden");
+
+
+    document
+        .getElementById("homeNav")
+        .classList.remove("active");
+
+
+    document
+        .getElementById("profileNav")
+        .classList.remove("active");
+
+
+    document
+        .getElementById("settingsNav")
+        .classList.add("active");
 }
 
 
@@ -793,6 +936,8 @@ async function saveTrade() {
 
 async function loadTrades() {
 
+    try {
+
     const {
         data: { user }
     } = await db.auth.getUser();
@@ -856,6 +1001,14 @@ async function loadTrades() {
             selectedCalendarDate
         );
     }
+
+    } catch (err) {
+        console.error(
+            "Ошибка loadTrades:",
+            err
+        );
+    }
+
 }
 
 
@@ -909,6 +1062,8 @@ function clearForm() {
 // =========================================
 
 function renderCalendar() {
+
+    try {
 
     const calendar =
         document.getElementById(
@@ -1150,6 +1305,14 @@ function renderCalendar() {
             dayElement
         );
     }
+
+    } catch (err) {
+        console.error(
+            "Ошибка renderCalendar:",
+            err
+        );
+    }
+
 }
 
 
@@ -1238,6 +1401,10 @@ function showDayTrades(
     dateString,
     day
 ) {
+
+    if (!dateString) {
+        return;
+    }
 
     selectedCalendarDate =
         dateString;
@@ -2074,7 +2241,12 @@ function formatReadableDate(
     dateString
 ) {
 
-    if (!dateString) {
+    if (
+        !dateString ||
+        typeof dateString !==
+            "string" ||
+        dateString.trim() === ""
+    ) {
         return "—";
     }
 
@@ -2894,6 +3066,473 @@ function updateExchangeRateInfo() {
             Обновлено: ${timeText}
         </div>
     `;
+}
+
+
+// =========================================
+// T-INVEST (Т-ИНВЕСТИЦИИ) SYNC
+// =========================================
+// Токен НИКОГДА не хранится и не расшифровывается в браузере.
+// Эти функции только пересылают его один раз в Edge Function
+// (по HTTPS, с проверкой сессии пользователя), которая шифрует
+// его и сохраняет. Дальше синхронизация тоже целиком идёт на
+// сервере — браузер только просит "синхронизируй" и получает
+// в ответ количество импортированных сделок.
+
+function functionsUrl(name) {
+
+    return SUPABASE_URL +
+        "/functions/v1/" +
+        name;
+}
+
+
+async function connectTinkoff() {
+
+    const tokenInput =
+        document.getElementById(
+            "tinkoffTokenInput"
+        );
+
+    const token =
+        tokenInput.value.trim();
+
+
+    if (!token) {
+
+        showAuthStatus(
+            "tinkoffStatus",
+            "Введите токен",
+            true
+        );
+
+        return;
+    }
+
+
+    const {
+        data: { session }
+    } = await db.auth.getSession();
+
+
+    if (!session) {
+
+        showAuthStatus(
+            "tinkoffStatus",
+            "Нет активной сессии",
+            true
+        );
+
+        return;
+    }
+
+
+    const btn =
+        document.getElementById(
+            "connectTinkoffBtn"
+        );
+
+    btn.disabled = true;
+
+    btn.textContent =
+        "Сохраняем...";
+
+
+    try {
+
+        const res =
+            await fetch(
+                functionsUrl(
+                    "save-broker-token"
+                ),
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        Authorization:
+                            "Bearer " +
+                            session.access_token
+                    },
+                    body: JSON.stringify({
+                        token
+                    })
+                }
+            );
+
+        const result =
+            await res.json();
+
+
+        if (!res.ok) {
+
+            showAuthStatus(
+                "tinkoffStatus",
+                result.error ||
+                    "Ошибка сохранения токена",
+                true
+            );
+
+            return;
+        }
+
+
+        tokenInput.value = "";
+
+        showAuthStatus(
+            "tinkoffStatus",
+            "Токен сохранён. Теперь можно синхронизировать сделки."
+        );
+
+    } catch (e) {
+
+        console.error(
+            "connectTinkoff error:",
+            e
+        );
+
+        showAuthStatus(
+            "tinkoffStatus",
+            "Ошибка сети",
+            true
+        );
+
+    } finally {
+
+        btn.disabled = false;
+
+        btn.textContent =
+            "Подключить";
+    }
+}
+
+
+async function syncTinkoffTrades() {
+
+    const {
+        data: { session }
+    } = await db.auth.getSession();
+
+
+    if (!session) {
+
+        showAuthStatus(
+            "tinkoffStatus",
+            "Нет активной сессии",
+            true
+        );
+
+        return;
+    }
+
+
+    const btn =
+        document.getElementById(
+            "syncTinkoffBtn"
+        );
+
+    btn.disabled = true;
+
+    btn.textContent =
+        "Синхронизация...";
+
+
+    try {
+
+        const res =
+            await fetch(
+                functionsUrl(
+                    "sync-tinkoff-trades"
+                ),
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        Authorization:
+                            "Bearer " +
+                            session.access_token
+                    },
+                    body: JSON.stringify({})
+                }
+            );
+
+        const result =
+            await res.json();
+
+
+        if (!res.ok) {
+
+            showAuthStatus(
+                "tinkoffStatus",
+                result.error ||
+                    "Ошибка синхронизации",
+                true
+            );
+
+            return;
+        }
+
+
+        showAuthStatus(
+            "tinkoffStatus",
+            "Импортировано сделок: " +
+                result.imported
+        );
+
+
+        await loadTrades();
+
+        renderCalendar();
+
+        updateProfile();
+
+    } catch (e) {
+
+        console.error(
+            "syncTinkoffTrades error:",
+            e
+        );
+
+        showAuthStatus(
+            "tinkoffStatus",
+            "Ошибка сети",
+            true
+        );
+
+    } finally {
+
+        btn.disabled = false;
+
+        btn.textContent =
+            "Синхронизировать сейчас";
+    }
+}
+
+
+// =========================================
+// RULES TOGGLE
+// =========================================
+
+function toggleRules() {
+
+    const content =
+        document.getElementById(
+            "rulesContent"
+        );
+
+    const header =
+        document.querySelector(
+            ".rules-header"
+        );
+
+    if (!content) return;
+
+    content.classList.toggle(
+        "hidden"
+    );
+
+    header.classList.toggle(
+        "active"
+    );
+}
+
+
+// =========================================
+// DELETE SYNCED TRADES
+// =========================================
+
+function openDeleteSyncedConfirm() {
+
+    const modal =
+        document.getElementById(
+            "deleteConfirmModal"
+        );
+
+    if (modal) {
+        modal.classList.remove("hidden");
+    }
+}
+
+
+function closeDeleteSyncedConfirm() {
+
+    const modal =
+        document.getElementById(
+            "deleteConfirmModal"
+        );
+
+    if (modal) {
+        modal.classList.add("hidden");
+    }
+}
+
+
+async function confirmDeleteSyncedTrades() {
+
+    closeDeleteSyncedConfirm();
+
+    try {
+
+        if (!db) return;
+
+        const { data: { user } } =
+            await db
+                .auth
+                .getUser();
+
+        if (!user) return;
+
+
+        const { error } =
+            await db
+                .from("trades")
+                .delete()
+                .eq("user_id", user.id)
+                .eq("source", "tinkoff");
+
+
+        if (error) {
+            console.error(
+                "Ошибка удаления:",
+                error
+            );
+            alert(
+                "Ошибка при удалении сделок"
+            );
+            return;
+        }
+
+        alert(
+            "✅ Синхронизированные сделки удалены"
+        );
+
+        loadTrades();
+
+        renderCalendar();
+
+        updateProfile();
+
+    } catch (err) {
+
+        console.error(err);
+
+        alert(
+            "Ошибка: " + err.message
+        );
+
+    }
+
+}
+
+
+// =========================================
+// THEME MANAGEMENT
+// =========================================
+
+let currentTheme = "dark";
+
+
+function initTheme() {
+
+    const saved =
+        localStorage.getItem(
+            "appTheme"
+        );
+
+    if (saved === "light") {
+
+        currentTheme = "light";
+
+        document
+            .documentElement
+            .classList.add(
+                "light-theme"
+            );
+
+    } else {
+
+        currentTheme = "dark";
+
+        document
+            .documentElement
+            .classList.remove(
+                "light-theme"
+            );
+    }
+
+    updateThemeUI();
+}
+
+
+function toggleTheme() {
+
+    if (currentTheme === "dark") {
+
+        currentTheme = "light";
+
+        document
+            .documentElement
+            .classList.add(
+                "light-theme"
+            );
+
+    } else {
+
+        currentTheme = "dark";
+
+        document
+            .documentElement
+            .classList.remove(
+                "light-theme"
+            );
+    }
+
+    localStorage.setItem(
+        "appTheme",
+        currentTheme
+    );
+
+    updateThemeUI();
+}
+
+
+function updateThemeUI() {
+
+    const toggle =
+        document.getElementById(
+            "themeToggle"
+        );
+
+    const label =
+        document.getElementById(
+            "themeLabel"
+        );
+
+
+    if (!toggle || !label) {
+        return;
+    }
+
+
+    if (currentTheme === "light") {
+
+        toggle.classList.add(
+            "active"
+        );
+
+        label.textContent =
+            "Светлая";
+
+    } else {
+
+        toggle.classList.remove(
+            "active"
+        );
+
+        label.textContent =
+            "Тёмная";
+    }
 }
 
 

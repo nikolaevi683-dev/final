@@ -127,35 +127,6 @@
             </div>
         </div>
 
-        <div class="account-section">
-
-            <label>Email для входа</label>
-
-            <div class="account-row">
-                <span id="accountEmailStatus">Не привязан</span>
-            </div>
-
-            <div id="accountLinkForm" class="account-link-form">
-
-                <input
-                    id="linkEmailInput"
-                    type="email"
-                    placeholder="you@example.com"
-                >
-
-                <button
-                    id="linkEmailButton"
-                    class="update-rates-button"
-                    onclick="linkEmail()">
-                    Привязать email
-                </button>
-
-            </div>
-
-            <p id="accountStatus" class="auth-status hidden"></p>
-
-        </div>
-
         <div class="profile-stat">
             <span>Профит сегодня</span>
             <strong id="profileTodayPnl">0 ₽</strong>
@@ -482,6 +453,175 @@
     </div>
 
 
+    <!-- НАСТРОЙКИ -->
+    <div id="settingsPage" class="hidden">
+
+        <h1>Настройки</h1>
+        <p class="subtitle">Персонализация приложения</p>
+
+        <div class="settings-card">
+
+            <div class="setting-item">
+
+                <div class="setting-info">
+                    <span class="setting-label">Оформление</span>
+                    <p class="setting-description">Выберите тему интерфейса</p>
+                </div>
+
+                <button 
+                    id="themeToggle" 
+                    class="theme-toggle"
+                    onclick="toggleTheme()">
+                    
+                    <div class="toggle-track">
+                        <div class="toggle-thumb"></div>
+                    </div>
+
+                    <span class="toggle-label" id="themeLabel">Тёмная</span>
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- Email для входа -->
+        <div class="account-section">
+
+            <label>Email для входа</label>
+
+            <div class="account-row">
+                <span id="accountEmailStatus">Не привязан</span>
+            </div>
+
+            <div id="accountLinkForm" class="account-link-form">
+
+                <input
+                    id="linkEmailInput"
+                    type="email"
+                    placeholder="you@example.com"
+                >
+
+                <button
+                    id="linkEmailButton"
+                    class="update-rates-button"
+                    onclick="linkEmail()">
+                    Привязать email
+                </button>
+
+            </div>
+
+            <p id="accountStatus" class="auth-status hidden"></p>
+
+        </div>
+
+        <!-- Т-Инвестиции -->
+        <div class="account-section">
+
+            <label>Т-Инвестиции</label>
+
+            <p class="rate-info" style="display:block; margin-bottom:10px;">
+                Токен хранится в зашифрованном виде на сервере и нигде не показывается повторно
+            </p>
+
+            <div class="account-link-form">
+
+                <input
+                    id="tinkoffTokenInput"
+                    type="password"
+                    placeholder="Токен T-Invest API"
+                >
+
+                <button
+                    id="connectTinkoffBtn"
+                    class="update-rates-button"
+                    onclick="connectTinkoff()">
+                    Подключить
+                </button>
+
+            </div>
+
+            <button
+                id="syncTinkoffBtn"
+                class="save-button"
+                onclick="syncTinkoffTrades()"
+                style="margin-top: 10px;">
+                Синхронизировать сейчас
+            </button>
+
+            <button
+                id="deleteSyncedBtn"
+                class="delete-button"
+                onclick="openDeleteSyncedConfirm()"
+                style="margin-top: 10px; margin-left: 8px;">
+                🗑️ Удалить синхронизированные
+            </button>
+
+            <p id="tinkoffStatus" class="auth-status hidden"></p>
+
+        </div>
+
+        <!-- Правила пользования -->
+        <div class="rules-section">
+
+            <button class="rules-header" onclick="toggleRules()">
+                <span class="rules-title">📋 Правила пользования</span>
+                <span class="rules-arrow" id="rulesArrow">▼</span>
+            </button>
+
+            <div class="rules-content hidden" id="rulesContent">
+
+                <div class="rule-item">
+                    <h3>🔐 Безопасность данных</h3>
+                    <p>Все ваши данные хранятся в зашифрованном виде на защищенных серверах. Токены Т-Инвестиций шифруются AES-GCM и никогда не передаются открытым текстом.</p>
+                </div>
+
+                <div class="rule-item">
+                    <h3>💾 Локальное хранилище</h3>
+                    <p>Данные сделок синхронизируются с вашим аккаунтом в облаке. При смене браузера или устройства просто войдите по email — вся история загрузится автоматически.</p>
+                </div>
+
+                <div class="rule-item">
+                    <h3>🤖 Как работает синхронизация</h3>
+                    <p>Токен Т-Инвестиций используется только для получения истории ваших сделок. Приложение НЕ совершает операции от вашего имени. Синхронизация происходит по вашему запросу.</p>
+                </div>
+
+                <div class="rule-item">
+                    <h3>⚖️ Отказ от ответственности</h3>
+                    <p>Приложение предназначено только для учета и анализа сделок. Мы не даем инвестиционные советы и не несем ответственность за ваши торговые решения и убытки.</p>
+                </div>
+
+                <div class="rule-item">
+                    <h3>📊 Расчет статистики</h3>
+                    <p>Win Rate = (Прибыльные сделки / Всего сделок) × 100%. Все расчеты происходят локально на вашем устройстве. Профит считается в выбранной валюте с текущим курсом ЦБ РФ.</p>
+                </div>
+
+                <div class="rule-item">
+                    <h3>🌙☀️ Темы оформления</h3>
+                    <p>Выбранная тема сохраняется в браузере. Переключение между темной и светлой темой не влияет на данные — только на внешний вид приложения.</p>
+                </div>
+
+                <div class="rule-item">
+                    <h3>🗑️ Удаление данных</h3>
+                    <p>Вы можете удалять сделки прямо из приложения. При выходе из аккаунта данные остаются на сервере. Для полного удаления свяжитесь с поддержкой.</p>
+                </div>
+
+                <div class="rule-item">
+                    <h3>🔄 Обновления</h3>
+                    <p>Приложение использует облачные данные, поэтому обновления загружаются автоматически без необходимости переустановки. Ваши данные всегда актуальны.</p>
+                </div>
+
+                <div class="rule-item">
+                    <h3>💡 Советы по использованию</h3>
+                    <p>• Регулярно проверяйте статистику для анализа своей торговли<br>• Добавляйте комментарии к сделкам для лучшего анализа<br>• Используйте фильтры по периодам для отслеживания прогресса<br>• Сохраняйте токен Т-Инвестиций в безопасности</p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
     <!-- НИЖНЯЯ НАВИГАЦИЯ -->
     <div class="bottom-nav">
 
@@ -505,6 +645,65 @@
             <span>Профиль</span>
 
         </button>
+
+        <button
+            id="settingsNav"
+            class="nav-button"
+            onclick="showSettings()">
+
+            <span class="nav-icon">⚙</span>
+            <span>Настройки</span>
+
+        </button>
+
+    </div>
+
+    <!-- МОДАЛЬ ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ -->
+    <div id="deleteConfirmModal" class="modal hidden">
+
+        <div class="modal-overlay" onclick="closeDeleteSyncedConfirm()"></div>
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <span class="modal-title">⚠️ Удалить синхронизированные сделки?</span>
+                <button class="modal-close" onclick="closeDeleteSyncedConfirm()">✕</button>
+            </div>
+
+            <div class="modal-body">
+
+                <p class="warning-text">
+                    Это действие <strong>необратимо</strong>! Все сделки, синхронизированные из Т-Инвестиций, будут удалены из приложения.
+                </p>
+
+                <div class="warning-box">
+                    <p>📝 Рекомендуем:</p>
+                    <ul>
+                        <li>Экспортировать данные перед удалением (если нужны)</li>
+                        <li>Сделки останут на счете Т-Инвестиций, удалятся только из приложения</li>
+                        <li>После удаления сможете синхронизировать снова</li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button 
+                    class="modal-button cancel"
+                    onclick="closeDeleteSyncedConfirm()">
+                    Отмена
+                </button>
+
+                <button 
+                    class="modal-button confirm"
+                    onclick="confirmDeleteSyncedTrades()">
+                    Удалить
+                </button>
+
+            </div>
+
+        </div>
 
     </div>
 
