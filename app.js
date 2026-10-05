@@ -3253,7 +3253,7 @@ async function syncTinkoffTrades() {
                             "Bearer " +
                             session.access_token
                     },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({ full: true })
                 }
             );
 
@@ -3401,6 +3401,20 @@ async function confirmDeleteSyncedTrades() {
                 "Ошибка при удалении сделок"
             );
             return;
+        }
+
+        // Запоминаем момент удаления на сервере, чтобы автосинхронизация
+        // не возвращала старые сделки при следующем входе
+        const { error: markError } =
+            await db.rpc(
+                "mark_synced_trades_deleted"
+            );
+
+        if (markError) {
+            console.error(
+                "Ошибка записи sync_from:",
+                markError
+            );
         }
 
         alert(

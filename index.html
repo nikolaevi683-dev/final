@@ -4,15 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Humble</title>
+    <meta name="theme-color" content="#0b100e">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..700&family=Unbounded:wght@400..600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
 <div class="app">
+
+    <header class="topbar"><span class="wordmark">Humble</span><button id="settingsNav" class="nav-button" aria-label="Настройки" onclick="showSettings()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></button></header>
+
 
     <!-- ВХОД -->
     <div id="authPage" class="hidden">
@@ -22,26 +26,25 @@
 
         <div class="form">
 
-            <label>Email</label>
+            <div id="authEmailStep" class="auth-step">
+                <label for="authEmail">Email</label>
+                <input id="authEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com">
+                <button id="authSendButton" class="save-button" onclick="sendLoginLink()">Получить письмо</button>
+            </div>
 
-            <input
-                id="authEmail"
-                type="email"
-                placeholder="you@example.com"
-            >
-
-            <button
-                id="authSendButton"
-                class="save-button"
-                onclick="sendLoginLink()">
-                Получить ссылку для входа
-            </button>
+            <div id="authCodeStep" class="auth-step hidden">
+                <label for="authCode">Код из письма</label>
+                <input id="authCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="······">
+                <button id="authVerifyButton" class="save-button" onclick="verifyEmailCode()">Войти</button>
+                <div class="code-actions">
+                    <button id="authResendButton" onclick="sendLoginLink()">Отправить ещё раз</button>
+                    <button onclick="authChangeEmail()">Другой email</button>
+                </div>
+            </div>
 
             <p id="authStatus" class="auth-status hidden"></p>
 
-            <button class="guest-button" onclick="continueAsGuest()">
-                Продолжить без входа
-            </button>
+            <button class="guest-button" onclick="continueAsGuest()">Продолжить без входа</button>
 
         </div>
 
@@ -51,12 +54,9 @@
     <!-- ГЛАВНАЯ -->
     <div id="homePage" class="hidden">
 
-        <h1>Humble</h1>
-        <p class="subtitle">Мой торговый журнал</p>
+        <section class="hero"><span class="hero-label">Профит сегодня</span><strong id="profileTodayPnl">0 ₽</strong><div class="hero-sub"><span>За всё время</span><b id="profileTotalPnl">0 ₽</b></div></section>
+        <button id="apiBanner" class="api-banner hidden" onclick="openApiSetup()"><span class="api-banner-ico"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v5M15 3v5M7 8h10v3a5 5 0 0 1-10 0V8Z"/><path d="M12 16v5"/></svg></span><span class="api-banner-text"><b>Подключите T-Invest API</b><small>Сделки будут подтягиваться сами</small></span><span class="api-banner-go">→</span></button>
 
-        <button class="add-button" onclick="openTradeForm()">
-            + Добавить сделку
-        </button>
 
         <div class="calendar-section">
 
@@ -90,10 +90,6 @@
                 Сделки
             </h2>
 
-            <button class="add-button" onclick="addTradeForSelectedDay()">
-                + Добавить сделку на этот день
-            </button>
-
             <div id="selectedDayList"></div>
 
         </div>
@@ -104,42 +100,10 @@
     <!-- ПРОФИЛЬ -->
     <div id="profilePage" class="hidden">
 
-        <h1>Профиль</h1>
-        <p class="subtitle">Твоя статистика</p>
+        <h1>Итоги</h1>
+        <p class="subtitle">Итоги и валюта</p>
 
-        <div class="currency-selector">
-            <label>Валюта</label>
-            <select id="currencySelect" onchange="handleCurrencyChange()">
-                <option value="RUB">Рубль (₽)</option>
-                <option value="USD">Доллар ($)</option>
-                <option value="EUR">Евро (€)</option>
-            </select>
-            <div class="exchange-rates">
-                <span id="exchangeRateInfo" class="rate-info">
-                    Курс: 1 $ = 100 ₽ | 1 € = 115 ₽
-                </span>
-                <button 
-                    id="updateRatesBtn" 
-                    class="update-rates-button"
-                    onclick="updateRatesFromAPI()">
-                    🔄 Обновить курс
-                </button>
-            </div>
-        </div>
-
-        <div class="profile-stat">
-            <span>Профит сегодня</span>
-            <strong id="profileTodayPnl">0 ₽</strong>
-        </div>
-
-        <div class="profile-stat">
-            <span>Профит за всё время</span>
-            <strong id="profileTotalPnl">0 ₽</strong>
-        </div>
-
-        <h2 class="profile-title">
-            Статистика
-        </h2>
+        
 
         <div class="details-card">
 
@@ -178,6 +142,25 @@
 
         </button>
 
+        <div class="currency-selector">
+            <label>Валюта</label>
+            <select id="currencySelect" onchange="handleCurrencyChange()">
+                <option value="RUB">Рубль (₽)</option>
+                <option value="USD">Доллар ($)</option>
+                <option value="EUR">Евро (€)</option>
+            </select>
+            <div class="exchange-rates">
+                <span id="exchangeRateInfo" class="rate-info">
+                    Курс: 1 $ = 100 ₽ | 1 € = 115 ₽
+                </span>
+                <button 
+                    id="updateRatesBtn" 
+                    class="update-rates-button"
+                    onclick="updateRatesFromAPI()">
+                    Обновить курс
+                </button>
+            </div>
+        </div>
     </div>
 
 
@@ -185,7 +168,7 @@
     <div id="allTradesPage" class="hidden">
 
         <button class="back-button" onclick="closeAllTrades()">
-            ← Назад
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg> Назад
         </button>
 
         <h1>Все сделки</h1>
@@ -276,7 +259,7 @@
     <div id="tradeDetails" class="hidden">
 
         <button class="back-button" onclick="closeTradeDetails()">
-            ← Назад
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg> Назад
         </button>
 
         <h1 id="detailsSymbol">
@@ -286,6 +269,8 @@
         <p class="subtitle" id="detailsDate">
             8 сентября 2026
         </p>
+
+        <div class="result"><span>Результат</span><strong id="detailsPnl"></strong></div>
 
         <div class="details-card">
 
@@ -314,10 +299,7 @@
                 <strong id="detailsTakeProfit"></strong>
             </div>
 
-            <div class="detail-row">
-                <span>Результат</span>
-                <strong id="detailsPnl"></strong>
-            </div>
+            
 
         </div>
 
@@ -331,13 +313,13 @@
 
         </div>
 
-        <button class="edit-button" onclick="editTrade()">
+        <div class="actions"><button class="edit-button" onclick="editTrade()">
             Изменить
         </button>
 
         <button class="delete-button" onclick="deleteTrade()">
             Удалить сделку
-        </button>
+        </button></div>
 
     </div>
 
@@ -346,7 +328,7 @@
     <div id="tradePage" class="hidden">
 
         <button class="back-button" onclick="closeTradeForm()">
-            ← Назад
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg> Назад
         </button>
 
         <h1 id="formTitle">
@@ -389,43 +371,43 @@
             </div>
 
 
-            <label>Цена входа</label>
+            <div class="grid2"><div class="field"><label>Цена входа</label>
 
             <input
                 id="entry"
                 type="number"
                 placeholder="0"
-            >
+            ></div>
 
 
-            <label>Цена выхода</label>
+            <div class="field"><label>Цена выхода</label>
 
             <input
                 id="exit"
                 type="number"
                 placeholder="0"
-            >
+            ></div>
 
 
-            <label>Stop Loss</label>
+            <div class="field"><label>Stop Loss</label>
 
             <input
                 id="stopLoss"
                 type="number"
                 placeholder="0"
-            >
+            ></div>
 
 
-            <label>Take Profit</label>
+            <div class="field"><label>Take Profit</label>
 
             <input
                 id="takeProfit"
                 type="number"
                 placeholder="0"
-            >
+            ></div></div>
 
 
-            <label>Результат, ₽</label>
+            <label class="pnl-label">Результат, ₽</label>
 
             <input
                 id="pnl"
@@ -455,6 +437,8 @@
 
     <!-- НАСТРОЙКИ -->
     <div id="settingsPage" class="hidden">
+
+        <button class="back-button" onclick="showHome()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg> Назад</button>
 
         <h1>Настройки</h1>
         <p class="subtitle">Персонализация приложения</p>
@@ -519,7 +503,7 @@
 
             <label>Т-Инвестиции</label>
 
-            <p class="rate-info" style="display:block; margin-bottom:10px;">
+            <p class="rate-info">
                 Токен хранится в зашифрованном виде на сервере и нигде не показывается повторно
             </p>
 
@@ -540,21 +524,21 @@
 
             </div>
 
+            <div class="broker-actions">
             <button
                 id="syncTinkoffBtn"
                 class="save-button"
-                onclick="syncTinkoffTrades()"
-                style="margin-top: 10px;">
+                onclick="syncTinkoffTrades()">
                 Синхронизировать сейчас
             </button>
 
             <button
                 id="deleteSyncedBtn"
                 class="delete-button"
-                onclick="openDeleteSyncedConfirm()"
-                style="margin-top: 10px; margin-left: 8px;">
-                🗑️ Удалить синхронизированные
+                onclick="openDeleteSyncedConfirm()">
+                Удалить синхронизированные
             </button>
+            </div>
 
             <p id="tinkoffStatus" class="auth-status hidden"></p>
 
@@ -564,54 +548,54 @@
         <div class="rules-section">
 
             <button class="rules-header" onclick="toggleRules()">
-                <span class="rules-title">📋 Правила пользования</span>
-                <span class="rules-arrow" id="rulesArrow">▼</span>
+                <span class="rules-title">Правила пользования</span>
+                <span class="rules-arrow" id="rulesArrow"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
             </button>
 
             <div class="rules-content hidden" id="rulesContent">
 
                 <div class="rule-item">
-                    <h3>🔐 Безопасность данных</h3>
+                    <h3>Безопасность данных</h3>
                     <p>Все ваши данные хранятся в зашифрованном виде на защищенных серверах. Токены Т-Инвестиций шифруются AES-GCM и никогда не передаются открытым текстом.</p>
                 </div>
 
                 <div class="rule-item">
-                    <h3>💾 Локальное хранилище</h3>
+                    <h3>Локальное хранилище</h3>
                     <p>Данные сделок синхронизируются с вашим аккаунтом в облаке. При смене браузера или устройства просто войдите по email — вся история загрузится автоматически.</p>
                 </div>
 
                 <div class="rule-item">
-                    <h3>🤖 Как работает синхронизация</h3>
+                    <h3>Как работает синхронизация</h3>
                     <p>Токен Т-Инвестиций используется только для получения истории ваших сделок. Приложение НЕ совершает операции от вашего имени. Синхронизация происходит по вашему запросу.</p>
                 </div>
 
                 <div class="rule-item">
-                    <h3>⚖️ Отказ от ответственности</h3>
+                    <h3>Отказ от ответственности</h3>
                     <p>Приложение предназначено только для учета и анализа сделок. Мы не даем инвестиционные советы и не несем ответственность за ваши торговые решения и убытки.</p>
                 </div>
 
                 <div class="rule-item">
-                    <h3>📊 Расчет статистики</h3>
+                    <h3>Расчет статистики</h3>
                     <p>Win Rate = (Прибыльные сделки / Всего сделок) × 100%. Все расчеты происходят локально на вашем устройстве. Профит считается в выбранной валюте с текущим курсом ЦБ РФ.</p>
                 </div>
 
                 <div class="rule-item">
-                    <h3>🌙☀️ Темы оформления</h3>
+                    <h3>Темы оформления</h3>
                     <p>Выбранная тема сохраняется в браузере. Переключение между темной и светлой темой не влияет на данные — только на внешний вид приложения.</p>
                 </div>
 
                 <div class="rule-item">
-                    <h3>🗑️ Удаление данных</h3>
+                    <h3>Удаление данных</h3>
                     <p>Вы можете удалять сделки прямо из приложения. При выходе из аккаунта данные остаются на сервере. Для полного удаления свяжитесь с поддержкой.</p>
                 </div>
 
                 <div class="rule-item">
-                    <h3>🔄 Обновления</h3>
+                    <h3>Обновления</h3>
                     <p>Приложение использует облачные данные, поэтому обновления загружаются автоматически без необходимости переустановки. Ваши данные всегда актуальны.</p>
                 </div>
 
                 <div class="rule-item">
-                    <h3>💡 Советы по использованию</h3>
+                    <h3>Советы по использованию</h3>
                     <p>• Регулярно проверяйте статистику для анализа своей торговли<br>• Добавляйте комментарии к сделкам для лучшего анализа<br>• Используйте фильтры по периодам для отслеживания прогресса<br>• Сохраняйте токен Т-Инвестиций в безопасности</p>
                 </div>
 
@@ -619,44 +603,17 @@
 
         </div>
 
+            <button id="logoutBtn" class="logout-button" onclick="logoutHumble()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M16 8l4 4-4 4M20 12H9"/></svg> Выйти из аккаунта</button>
+
     </div>
 
 
     <!-- НИЖНЯЯ НАВИГАЦИЯ -->
     <div class="bottom-nav">
-
-        <button
-            id="homeNav"
-            class="nav-button active"
-            onclick="showHome()">
-
-            <span class="nav-icon">⌂</span>
-            <span>Главная</span>
-
-        </button>
-
-
-        <button
-            id="profileNav"
-            class="nav-button"
-            onclick="showProfile()">
-
-            <span class="nav-icon">◉</span>
-            <span>Профиль</span>
-
-        </button>
-
-        <button
-            id="settingsNav"
-            class="nav-button"
-            onclick="showSettings()">
-
-            <span class="nav-icon">⚙</span>
-            <span>Настройки</span>
-
-        </button>
-
-    </div>
+<button id="homeNav" class="nav-button active" aria-label="Главная" onclick="showHome()"><span class="nav-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/></svg></span><span>Главная</span></button>
+<button class="fab" aria-label="Добавить сделку" data-hint="На выбранный день" onclick="addTradeForSelectedDay()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+<button id="profileNav" class="nav-button" aria-label="Профиль" onclick="showProfile()"><span class="nav-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg></span><span>Итоги</span></button>
+</div>
 
     <!-- МОДАЛЬ ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ -->
     <div id="deleteConfirmModal" class="modal hidden">
@@ -666,8 +623,8 @@
         <div class="modal-content">
 
             <div class="modal-header">
-                <span class="modal-title">⚠️ Удалить синхронизированные сделки?</span>
-                <button class="modal-close" onclick="closeDeleteSyncedConfirm()">✕</button>
+                <span class="modal-title">Удалить синхронизированные сделки?</span>
+                <button class="modal-close" onclick="closeDeleteSyncedConfirm()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
             </div>
 
             <div class="modal-body">
@@ -677,10 +634,10 @@
                 </p>
 
                 <div class="warning-box">
-                    <p>📝 Рекомендуем:</p>
+                    <p>Рекомендуем:</p>
                     <ul>
                         <li>Экспортировать данные перед удалением (если нужны)</li>
-                        <li>Сделки останут на счете Т-Инвестиций, удалятся только из приложения</li>
+                        <li>Сделки останутся на счете Т-Инвестиций, удалятся только из приложения</li>
                         <li>После удаления сможете синхронизировать снова</li>
                     </ul>
                 </div>
@@ -711,7 +668,142 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* Баннер «Подключить API»: клиент не может прочитать токен (так задумано в RLS),
+   поэтому состояние определяется по ответам Edge Functions. */
+(function () {
+    const KEY = "humble_api_connected:";
+    const setBanner = (show) => {
+        const b = document.getElementById("apiBanner");
+        if (b) b.classList.toggle("hidden", !show);
+    };
+    function userId(init) {
+        try {
+            const h = new Headers((init && init.headers) || {}).get("Authorization") || "";
+            const p = h.replace("Bearer ", "").split(".")[1];
+            return JSON.parse(atob(p.replace(/-/g, "+").replace(/_/g, "/"))).sub;
+        } catch (e) { return null; }
+    }
+    const orig = window.fetch.bind(window);
+    window.fetch = async function (input, init) {
+        const res = await orig(input, init);
+        try {
+            const url = typeof input === "string" ? input : input.url;
+            const isSave = url.includes("save-broker-token");
+            const isSync = url.includes("sync-tinkoff-trades");
+            const id = (isSave || isSync) && userId(init);
+            if (id) {
+                const k = KEY + id;
+                if (res.ok) { localStorage.setItem(k, "1"); setBanner(false); }
+                else if (isSync && !localStorage.getItem(k)) setBanner(true);
+            }
+        } catch (e) {}
+        return res;
+    };
+    window.openApiSetup = function () {
+        showSettings();
+        setTimeout(() => {
+            const i = document.getElementById("tinkoffTokenInput");
+            if (i) { i.scrollIntoView({ block: "center" }); i.focus({ preventScroll: true }); }
+        }, 60);
+    };
+})();
+</script>
 <script src="app.js"></script>
+<script>
+/* Вход по email: код из письма + ссылка, понятные ошибки, защита от частых запросов */
+(function () {
+    const $ = (id) => document.getElementById(id);
+    let timer = null;
+
+    function friendly(e) {
+        const m = ((e && e.message) || "").toLowerCase();
+        const c = String((e && e.code) || "");
+        if (c === "over_email_send_rate_limit" || m.includes("rate limit") || m.includes("security purposes"))
+            return "Слишком частые запросы. Подождите минуту и попробуйте снова.";
+        if (m.includes("signups not allowed") || m.includes("signups") && m.includes("disabled"))
+            return "Вход по email отключён в настройках проекта Supabase.";
+        if (m.includes("email") && m.includes("invalid")) return "Проверьте адрес email.";
+        if (m.includes("failed to fetch") || m.includes("network")) return "Нет связи с сервером. Проверьте интернет.";
+        return "Не удалось отправить письмо: " + ((e && e.message) || "неизвестная ошибка");
+    }
+
+    function cooldown(sec) {
+        const btn = $("authResendButton");
+        clearInterval(timer);
+        btn.disabled = true;
+        timer = setInterval(() => {
+            sec--;
+            if (sec <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = "Отправить ещё раз"; }
+            else btn.textContent = "Отправить ещё раз (" + sec + ")";
+        }, 1000);
+        btn.textContent = "Отправить ещё раз (" + sec + ")";
+    }
+
+    window.sendLoginLink = async function () {
+        const email = $("authEmail").value.trim();
+        if (!/^\S+@\S+\.\S+$/.test(email)) { showAuthStatus("authStatus", "Введите корректный email", true); return; }
+        const btn = $("authSendButton");
+        btn.disabled = true; btn.textContent = "Отправляем…";
+        try {
+            const options = { shouldCreateUser: true };
+            // ссылка возвращает на эту же страницу, но без хвоста из старых токенов
+            if (location.protocol.startsWith("http")) options.emailRedirectTo = location.origin + location.pathname;
+            const { error } = await db.auth.signInWithOtp({ email, options });
+            if (error) { console.error("Login error:", error); showAuthStatus("authStatus", friendly(error), true); return; }
+            $("authEmailStep").classList.add("hidden");
+            $("authCodeStep").classList.remove("hidden");
+            showAuthStatus("authStatus", "Письмо отправлено на " + email + ". Введите код из него или откройте ссылку на этом устройстве.");
+            cooldown(60);
+            $("authCode").focus();
+        } catch (e) {
+            console.error(e); showAuthStatus("authStatus", friendly(e), true);
+        } finally {
+            btn.disabled = false; btn.textContent = "Получить письмо";
+        }
+    };
+
+    window.verifyEmailCode = async function () {
+        const email = $("authEmail").value.trim();
+        const token = $("authCode").value.replace(/\s/g, "");
+        if (token.length < 6) { showAuthStatus("authStatus", "Введите код из письма", true); return; }
+        const btn = $("authVerifyButton");
+        btn.disabled = true; btn.textContent = "Проверяем…";
+        const { error } = await db.auth.verifyOtp({ email, token, type: "email" });
+        btn.disabled = false; btn.textContent = "Войти";
+        if (error) { console.error("Verify error:", error); showAuthStatus("authStatus", "Код неверный или устарел. Запросите новый.", true); }
+    };
+
+    window.authChangeEmail = function () {
+        clearInterval(timer);
+        $("authCodeStep").classList.add("hidden");
+        $("authEmailStep").classList.remove("hidden");
+        $("authStatus").classList.add("hidden");
+        $("authCode").value = "";
+        $("authEmail").focus();
+    };
+
+    $("authEmail").addEventListener("keydown", (e) => { if (e.key === "Enter") sendLoginLink(); });
+    $("authCode").addEventListener("keydown", (e) => { if (e.key === "Enter") verifyEmailCode(); });
+})();
+</script>
+<script>
+async function logoutHumble() {
+    try {
+        const { data: { user } } = await db.auth.getUser();
+        const guest = user && user.is_anonymous;
+        const text = guest
+            ? "Вы вошли как гость. После выхода доступ к этим сделкам будет потерян. Сначала привяжите email в настройках. Всё равно выйти?"
+            : "Выйти из аккаунта?";
+        if (!confirm(text)) return;
+        await db.auth.signOut();
+    } catch (e) {
+        console.error(e);
+    }
+    location.reload();
+}
+</script>
+
 
 </body>
 </html>
