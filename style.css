@@ -233,6 +233,21 @@ body:has(#homePage:not(.hidden) #dayTrades:not(.hidden)) .fab{animation:nudge 1.
 .api-banner-text b{font-size:15px;font-weight:600}
 .api-banner-text small{font-size:12px;color:var(--muted)}
 .api-banner-go{font-size:20px;color:var(--accent)}
+
+/* ряд с пилюлей баланса и баннером «Spectre 3030» */
+.hero-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hero-promo-pill{position:relative;overflow:hidden;flex:none;display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:999px;color:#fff;font-size:13px;
+  background:linear-gradient(135deg,var(--accent),var(--profit));
+  box-shadow:0 4px 14px -6px color-mix(in srgb,var(--accent) 70%,transparent);
+  transition:transform .12s}
+.hero-promo-pill:active{transform:scale(.96)}
+.hero-promo-pill svg{position:relative;z-index:1;width:14px;height:14px}
+.hero-promo-pill b{position:relative;z-index:1;font-weight:700}
+.hero-promo-glow{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);
+  transform:translateX(-120%);animation:promoShine 3.4s ease-in-out infinite}
+@keyframes promoShine{0%,55%{transform:translateX(-120%)}80%{transform:translateX(120%)}100%{transform:translateX(120%)}}
 #settingsPage>.back-button{margin-bottom:14px}
 
 /* вход: шаги и код */
