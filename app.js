@@ -32,6 +32,8 @@ let currentCurrency = "RUB";
 
 let lastRatesUpdate = null;
 
+let detailsReturnPage = "home";
+
 // =========================================
 // CURRENCY DATA
 // =========================================
@@ -72,7 +74,7 @@ db.auth.onAuthStateChange(
                 .getElementById("authPage")
                 .classList.add("hidden");
 
-            startApp();
+            setTimeout(startApp, 0); // вне колбэка, чтобы не словить дедлок supabase-js
 
             return;
         }
@@ -90,81 +92,6 @@ db.auth.onAuthStateChange(
         }
     }
 );
-
-
-async function sendLoginLink() {
-
-    const email =
-        document
-            .getElementById("authEmail")
-            .value
-            .trim();
-
-
-    if (!email) {
-
-        showAuthStatus(
-            "authStatus",
-            "Введите email",
-            true
-        );
-
-        return;
-    }
-
-
-    const button =
-        document.getElementById(
-            "authSendButton"
-        );
-
-    button.disabled = true;
-
-    button.textContent =
-        "Отправляем...";
-
-
-    const { error } =
-        await db.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo:
-                    window.location.href
-            }
-        });
-
-
-    button.disabled = false;
-
-    button.textContent =
-        "Получить ссылку для входа";
-
-
-    if (error) {
-
-        console.error(
-            "Login link error:",
-            error
-        );
-
-        showAuthStatus(
-            "authStatus",
-            "Не удалось отправить ссылку: " +
-                error.message,
-            true
-        );
-
-        return;
-    }
-
-
-    showAuthStatus(
-        "authStatus",
-        "Ссылка отправлена на " +
-            email +
-            ". Откройте её с этого устройства."
-    );
-}
 
 
 async function continueAsGuest() {
@@ -374,6 +301,8 @@ async function startApp() {
     // каждом входе в приложение — если брокер ещё не подключён или
     // временно недоступен, просто тихо ничего не делаем (без сообщений
     // об ошибке пользователю), чтобы не мешать обычному открытию приложения.
+    refreshApiBanner();
+
     autoSyncTinkoffTrades();
 }
 
@@ -387,6 +316,14 @@ async function autoSyncTinkoffTrades() {
         } = await db.auth.getSession();
 
         if (!session) return;
+
+        const syncKey = "lastAutoSync:" + session.user.id;
+
+        if (Date.now() - Number(localStorage.getItem(syncKey) || 0) < 10 * 60 * 1000) {
+            return;
+        }
+
+        localStorage.setItem(syncKey, String(Date.now()));
 
         const res =
             await fetch(
@@ -451,6 +388,8 @@ async function autoSyncTinkoffTrades() {
 
 function showHome() {
 
+    hidePortfolioPage();
+
     document
         .getElementById("homePage")
         .classList.remove("hidden");
@@ -501,6 +440,8 @@ function showHome() {
 
 
 function showProfile() {
+
+    hidePortfolioPage();
 
     document
         .getElementById("homePage")
@@ -553,6 +494,8 @@ function showProfile() {
 
 function showSettings() {
 
+    hidePortfolioPage();
+
     document
         .getElementById("homePage")
         .classList.add("hidden");
@@ -604,6 +547,8 @@ function showSettings() {
 // =========================================
 
 function openAllTrades() {
+
+    hideSettingsPage();
 
     document
         .getElementById("homePage")
@@ -664,6 +609,10 @@ function closeAllTrades() {
 // =========================================
 
 function openTradeForm(dateString) {
+
+    hidePortfolioPage();
+
+    hideSettingsPage();
 
     document
         .getElementById("homePage")
@@ -946,19 +895,24 @@ async function loadTrades() {
     if (!user) return;
 
 
-    const {
-        data,
-        error
-    } = await db
-        .from("trades")
-        .select("*")
-        .eq("user_id", user.id)
-        .order(
-            "created_at",
-            {
-                ascending: false
-            }
-        );
+    let data = [];
+    let error = null;
+    const PAGE = 1000;
+
+    for (let from = 0; ; from += PAGE) {
+        const res = await db
+            .from("trades")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("trade_date", { ascending: false })
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, from + PAGE - 1);
+
+        if (res.error) { error = res.error; break; }
+        data = data.concat(res.data || []);
+        if (!res.data || res.data.length < PAGE) break;
+    }
 
 
     if (error) {
@@ -1263,18 +1217,7 @@ function renderCalendar() {
             dayTrades.length > 0
         ) {
 
-            pnlText =
-                totalPnl > 0
-                    ? "+" +
-                      formatNumber(
-                          totalPnl
-                      ) +
-                      " ₽"
-
-                    : formatNumber(
-                        totalPnl
-                      ) +
-                      " ₽";
+            pnlText = formatPnlCompact(totalPnl);
         }
 
 
@@ -1503,68 +1446,33 @@ function addTradeForSelectedDay() {
 // TRADE CARD
 // =========================================
 
-function createTradeCard(
-    trade
-) {
+function createTradeCard(trade) {
 
-    const item =
-        document.createElement(
-            "div"
-        );
-
-
+    // textContent вместо innerHTML: символ может прийти от брокера
+    const item = document.createElement("div");
     item.className = "card";
 
+    const date = document.createElement("span");
+    date.textContent = formatReadableDate(trade.trade_date);
 
-    const pnl =
-        Number(trade.pnl);
+    const symbol = document.createElement("strong");
+    symbol.textContent = trade.symbol;
 
+    const info = document.createElement("div");
+    info.append(document.createTextNode(trade.direction + " · "));
 
-    const pnlText =
-        pnl > 0
-            ? "+" +
-              formatNumber(pnl) +
-              " ₽"
+    const pnl = document.createElement("b");
+    pnl.textContent = formatPnl(trade.pnl);
+    info.append(pnl);
 
-            : formatNumber(pnl) +
-              " ₽";
+    item.append(date, symbol, info);
 
-
-    item.innerHTML = `
-
-        <span>
-            ${formatReadableDate(
-                trade.trade_date
-            )}
-        </span>
-
-        <strong>
-            ${trade.symbol}
-        </strong>
-
-        <div>
-            ${trade.direction}
-            ·
-            <b>
-                ${pnlText}
-            </b>
-        </div>
-
-    `;
-
-
-    item.onclick =
-        function () {
-
-            openTradeDetails(
-                trade
-            );
-        };
-
+    item.onclick = function () {
+        openTradeDetails(trade);
+    };
 
     return item;
 }
-
 
 // =========================================
 // PROFILE
@@ -2303,6 +2211,12 @@ function openTradeDetails(
     trade
 ) {
 
+    detailsReturnPage =
+        document.getElementById("allTradesPage").classList.contains("hidden")
+            ? "home" : "all";
+
+    hideSettingsPage();
+
     selectedTrade =
         trade;
 
@@ -2418,18 +2332,20 @@ function closeTradeDetails() {
 
     selectedTrade = null;
 
+    document.getElementById("tradeDetails").classList.add("hidden");
 
-    document
-        .getElementById("tradeDetails")
-        .classList.add("hidden");
+    if (detailsReturnPage === "all") {
 
+        document.getElementById("allTradesPage").classList.remove("hidden");
 
-    document
-        .getElementById("homePage")
-        .classList.remove("hidden");
+        renderAllTrades();
 
+    } else {
 
-    renderCalendar();
+        document.getElementById("homePage").classList.remove("hidden");
+
+        renderCalendar();
+    }
 }
 
 
@@ -2511,9 +2427,7 @@ function editTrade() {
 
 
     const saveButton =
-        document.querySelector(
-            ".save-button"
-        );
+        document.getElementById("saveTradeButton");
 
 
     saveButton.textContent =
@@ -2684,9 +2598,7 @@ async function updateTrade() {
 function resetSaveButton() {
 
     const saveButton =
-        document.querySelector(
-            ".save-button"
-        );
+        document.getElementById("saveTradeButton");
 
 
     if (!saveButton) {
@@ -3179,6 +3091,8 @@ async function connectTinkoff() {
 
         tokenInput.value = "";
 
+        refreshApiBanner();
+
         showAuthStatus(
             "tinkoffStatus",
             "Токен сохранён. Теперь можно синхронизировать сделки."
@@ -3557,3 +3471,384 @@ function updateThemeUI() {
 // Приложение стартует само: подписка onAuthStateChange выше
 // получает начальное состояние сессии сразу при регистрации
 // и вызывает startApp() или показывает экран входа.
+
+// =========================================
+// HELPERS (v2)
+// =========================================
+
+function hideSettingsPage() {
+
+    document.getElementById("settingsPage").classList.add("hidden");
+
+    document.getElementById("settingsNav").classList.remove("active");
+}
+
+function formatPnlCompact(value) {
+
+    const rub = Number(value);
+
+    const c = convertCurrency(rub, currentCurrency);
+
+    const symbol = currencyData[currentCurrency].symbol;
+
+    const abs = Math.abs(c);
+
+    const fmt = (n, d) =>
+        n.toLocaleString("ru-RU", { maximumFractionDigits: d });
+
+    let text;
+
+    if (abs >= 1e6) text = fmt(c / 1e6, 1) + "M";
+    else if (abs >= 1e4) text = fmt(c / 1e3, 1) + "k";
+    else text = fmt(c, 2);
+
+    return (rub > 0 ? "+" : "") + text + " " + symbol;
+}
+
+// Баннер «Подключите API»: статус берём из RPC broker_status
+// (сам токен клиенту по-прежнему недоступен).
+async function refreshApiBanner() {
+
+    try {
+
+        const { data, error } = await db.rpc("broker_status");
+
+        if (error) return;
+
+        const banner = document.getElementById("apiBanner");
+
+        if (banner) {
+            banner.classList.toggle("hidden", Array.isArray(data) && data.length > 0);
+        }
+
+    } catch (e) {
+        console.log("refreshApiBanner:", e);
+    }
+}
+
+function openApiSetup() {
+
+    showSettings();
+
+    setTimeout(() => {
+
+        const input = document.getElementById("tinkoffTokenInput");
+
+        if (input) {
+            input.scrollIntoView({ block: "center" });
+            input.focus({ preventScroll: true });
+        }
+
+    }, 60);
+}
+
+// =========================================
+// ПОРТФЕЛЬ (T-Invest)
+// =========================================
+// Данные приходят из Edge Function get-tinkoff-portfolio:
+// токен брокера в браузер не попадает.
+
+let portfolioData = null;
+let portfolioLoading = false;
+let portfolioLoadedAt = 0;
+const PORTFOLIO_MAX_AGE_MS = 30 * 1000;
+
+const PF_GROUPS = [
+    { key: "share",    label: "Акции",     color: "var(--accent)", total: "shares" },
+    { key: "bond",     label: "Облигации", color: "#7dd3fc",       total: "bonds" },
+    { key: "etf",      label: "Фонды",     color: "#fcd34d",       total: "etf" },
+    { key: "futures",  label: "Фьючерсы",  color: "#fb923c",       total: "futures" },
+    { key: "currency", label: "Валюта",    color: "#94a3b8",       total: "currencies" },
+    { key: "other",    label: "Прочее",    color: "#64748b",       total: "other" }
+];
+
+const PF_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", CNY: "¥", HKD: "HK$", GBP: "£", CHF: "₣" };
+
+function hidePortfolioPage() {
+    const page = document.getElementById("portfolioPage");
+    if (page) page.classList.add("hidden");
+    const nav = document.getElementById("portfolioNav");
+    if (nav) nav.classList.remove("active");
+}
+
+function showPortfolio() {
+    ["homePage", "profilePage", "allTradesPage", "tradePage", "tradeDetails", "settingsPage"]
+        .forEach(id => document.getElementById(id).classList.add("hidden"));
+    ["homeNav", "profileNav", "settingsNav"]
+        .forEach(id => document.getElementById(id).classList.remove("active"));
+
+    document.getElementById("portfolioPage").classList.remove("hidden");
+    document.getElementById("portfolioNav").classList.add("active");
+
+    if (portfolioData) renderPortfolio();
+
+    if (!portfolioData || Date.now() - portfolioLoadedAt > PORTFOLIO_MAX_AGE_MS) {
+        loadPortfolio();
+    }
+}
+
+function pfEsc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+}
+
+function pfNum(n, digits) {
+    return Number(n).toLocaleString("ru-RU", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+    });
+}
+
+// Сумма в рублях -> в выбранную в приложении валюту
+function pfRub(rub, signed) {
+    const c = convertCurrency(Number(rub), currentCurrency);
+    const sym = currencyData[currentCurrency].symbol;
+    const text = pfNum(c, Math.abs(c) >= 1000 ? 0 : 2);
+    return (signed && c > 0 ? "+" : "") + text + " " + sym;
+}
+
+function pfPct(v, signed) {
+    return (signed && v > 0 ? "+" : "") + pfNum(v, 2) + "%";
+}
+
+function pfSignClass(v) {
+    return v > 0 ? "pf-up" : v < 0 ? "pf-down" : "";
+}
+
+// Сумма в валюте инструмента -> рубли по курсам приложения (или null)
+function pfToRub(amount, cur) {
+    if (cur === "RUB") return amount;
+    const rate = exchangeRates[cur];
+    return rate ? amount * rate : null;
+}
+
+// Сумма позиции: в валюте приложения, а если курса нет — в своей валюте
+function pfMoney(amount, cur, signed) {
+    const rub = pfToRub(amount, cur);
+    if (rub !== null) return pfRub(rub, signed);
+    return (signed && amount > 0 ? "+" : "") + pfNum(amount, 2) + " " + (PF_SYMBOLS[cur] || cur);
+}
+
+function pfNative(amount, cur) {
+    return pfNum(amount, Math.abs(amount) >= 1000 ? 0 : 2) + " " + (PF_SYMBOLS[cur] || cur);
+}
+
+function pfQty(q) {
+    return Number(q).toLocaleString("ru-RU", { maximumFractionDigits: 4 });
+}
+
+function pfShowStatus(message, isError) {
+    showAuthStatus("pfStatus", message, isError);
+}
+
+function pfHideStatus() {
+    document.getElementById("pfStatus").classList.add("hidden");
+}
+
+async function loadPortfolio() {
+    if (portfolioLoading) return;
+    portfolioLoading = true;
+
+    const btn = document.getElementById("pfRefresh");
+    btn.disabled = true;
+    btn.classList.add("spinning");
+    pfHideStatus();
+
+    try {
+        const { data: { session } } = await db.auth.getSession();
+
+        if (!session) {
+            pfShowStatus("Нет активной сессии", true);
+            return;
+        }
+
+        const res = await fetch(functionsUrl("get-tinkoff-portfolio"), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + session.access_token
+            },
+            body: JSON.stringify({})
+        });
+
+        let result = {};
+        try { result = await res.json(); } catch (e) { /* не JSON */ }
+
+        if (!res.ok) {
+            if (result.code === "no_token") {
+                portfolioData = null;
+                document.getElementById("pfContent").classList.add("hidden");
+                document.getElementById("pfNoToken").classList.remove("hidden");
+                document.getElementById("pfTotal").textContent = "—";
+                document.getElementById("pfDaily").textContent = "—";
+                return;
+            }
+            // старые данные (если есть) остаются на экране
+            pfShowStatus(result.error || "Не удалось загрузить портфель", true);
+            return;
+        }
+
+        portfolioData = result;
+        portfolioLoadedAt = Date.now();
+        renderPortfolio();
+
+    } catch (e) {
+        console.error("loadPortfolio error:", e);
+        pfShowStatus("Ошибка сети. Проверьте подключение и обновите.", true);
+    } finally {
+        portfolioLoading = false;
+        btn.disabled = false;
+        btn.classList.remove("spinning");
+    }
+}
+
+function renderPortfolio() {
+    const d = portfolioData;
+    if (!d) return;
+
+    document.getElementById("pfNoToken").classList.add("hidden");
+    document.getElementById("pfContent").classList.remove("hidden");
+
+    // --- шапка: стоимость и изменение за день ---
+    document.getElementById("pfTotal").textContent = pfRub(d.totals.portfolio);
+
+    const dailyEl = document.getElementById("pfDaily");
+    if (d.daily && d.daily.amount !== null) {
+        const pct = d.daily.pct !== null ? " · " + pfPct(d.daily.pct, true) : "";
+        dailyEl.textContent = pfRub(d.daily.amount, true) + pct;
+        dailyEl.className = pfSignClass(d.daily.amount);
+    } else {
+        dailyEl.textContent = "—";
+        dailyEl.className = "";
+    }
+
+    renderPortfolioStructure(d);
+    renderPortfolioCash(d);
+    renderPortfolioPositions(d);
+
+    const t = new Date(d.updatedAt);
+    document.getElementById("pfUpdated").textContent =
+        "Обновлено в " + t.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+}
+
+function renderPortfolioStructure(d) {
+    const total = d.totals.portfolio;
+    const bar = document.getElementById("pfBar");
+    const legend = document.getElementById("pfLegend");
+
+    // «Прочее» (опционы, структурные ноты) показываем, только если оно есть
+    const groups = PF_GROUPS.filter(g => g.key !== "other" || d.totals.other !== 0);
+
+    bar.innerHTML = groups.map(g => {
+        const v = Math.max(0, d.totals[g.total]);
+        const w = total > 0 ? (v / total) * 100 : 0;
+        return w > 0 ? `<span style="width:${w.toFixed(2)}%;background:${g.color}"></span>` : "";
+    }).join("");
+
+    legend.innerHTML = groups.map(g => {
+        const v = d.totals[g.total];
+        const pct = total > 0 ? (v / total) * 100 : 0;
+        return `<div class="pf-legend-row${v === 0 ? " zero" : ""}">
+            <i class="pf-dot" style="background:${g.color}"></i>
+            <span>${g.label}</span>
+            <span class="pf-sum">${pfRub(v)}</span>
+            <span class="pf-pct">${pfNum(pct, 1)}%</span>
+        </div>`;
+    }).join("");
+}
+
+function renderPortfolioCash(d) {
+    const el = document.getElementById("pfCash");
+
+    if (!d.cash.length) {
+        el.innerHTML = `<div class="pf-empty">Свободных денег нет</div>`;
+        return;
+    }
+
+    el.innerHTML = d.cash.map(c => `
+        <div class="pf-cash-row">
+            <span>${pfEsc(c.currency)}</span>
+            <b>${pfNative(c.available, c.currency)}${c.blocked ? `<small>в заявках ${pfNative(c.blocked, c.currency)}</small>` : ""}</b>
+        </div>`).join("");
+}
+
+function renderPortfolioPositions(d) {
+    const el = document.getElementById("pfPositions");
+
+    if (!d.positions.length) {
+        el.innerHTML = `<div class="pf-card"><div class="pf-empty">Открытых позиций нет</div></div>`;
+        return;
+    }
+
+    const keyOf = p => PF_GROUPS.some(g => g.key === p.type) ? p.type : "other";
+    // размер позиции в рублях — для сортировки внутри группы
+    const sizeOf = p => {
+        const base = p.type === "futures" ? p.varMargin : p.value;
+        const rub = pfToRub(Math.abs(base || 0), p.currency);
+        return rub === null ? 0 : rub;
+    };
+
+    let html = "";
+
+    PF_GROUPS.forEach(g => {
+        const items = d.positions.filter(p => keyOf(p) === g.key).sort((a, b) => sizeOf(b) - sizeOf(a));
+        if (!items.length) return;
+
+        let right;
+        if (g.key === "futures") {
+            const margin = items.reduce((s, p) => s + (pfToRub(p.varMargin || 0, p.currency) || 0), 0);
+            right = "вар. маржа " + pfRub(margin, true);
+        } else {
+            right = pfRub(d.totals[g.total]);
+        }
+
+        html += `<div class="pf-group"><h3>${g.label}</h3><span>${right}</span></div>`;
+        html += items.map(renderPositionCard).join("");
+    });
+
+    el.innerHTML = html;
+}
+
+function renderPositionCard(p) {
+    const isFutures = p.type === "futures";
+    const short = p.quantity < 0;
+
+    // у фьючерсов цена в пунктах — без значка валюты
+    const price = v => isFutures ? pfNum(v, 2) : pfNative(v, p.currency);
+
+    const pnlText = pfMoney(p.pnl, p.currency, true);
+    const pctText = p.pnlPct !== null ? pfPct(p.pnlPct, true) : "";
+    const cls = pfSignClass(p.pnl);
+
+    const stats = [
+        ["Количество", pfQty(p.quantity)],
+        ["Средняя", price(p.avgPrice)],
+        ["Текущая", price(p.currentPrice)]
+    ];
+    if (!isFutures && p.value !== null) {
+        stats.push(["Стоимость", pfMoney(p.value, p.currency, false)]);
+    }
+
+    const margin = isFutures ? `
+        <div class="pf-margin">
+            <span>Вариационная маржа</span>
+            <b class="${pfSignClass(p.varMargin)}">${pfMoney(p.varMargin || 0, p.currency, true)}</b>
+        </div>` : "";
+
+    return `<div class="pf-position">
+        <div class="pf-pos-head">
+            <div class="pf-pos-id">
+                <strong>${pfEsc(p.ticker)}${short ? '<i class="pf-tag">шорт</i>' : ""}</strong>
+                <span>${pfEsc(p.name)}</span>
+            </div>
+            <div class="pf-pos-pnl ${cls}">
+                <b>${pnlText}</b>
+                <span>${pctText}</span>
+            </div>
+        </div>
+        <div class="pf-stats">
+            ${stats.map(s => `<div><span>${s[0]}</span><b>${s[1]}</b></div>`).join("")}
+        </div>${margin}
+    </div>`;
+}
