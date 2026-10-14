@@ -23,7 +23,7 @@
 
 <div class="app">
 
-    <header class="topbar"><span class="wordmark">Humble</span></header>
+    <header class="topbar"><span class="wordmark">Humble</span><button id="analysisNav" class="an-pill" aria-label="Анализ сделки" onclick="showAnalysis()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Анализ</span></button></header>
 
 
     <!-- ВХОД -->
@@ -62,7 +62,7 @@
     <!-- ГЛАВНАЯ -->
     <div id="homePage" class="hidden">
 
-        <section class="hero"><span class="hero-label">Профит сегодня</span><strong id="profileTodayPnl">0 ₽</strong><div class="hero-row"><div class="hero-sub"><span>За всё время</span><b id="profileTotalPnl">0 ₽</b></div><a href="https://t.me/HumbleProjectBot" target="_blank" rel="noopener" class="hero-promo-pill"><span class="hero-promo-glow"></span><svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 3.7 2.9 11c-1.1.4-1.1 1.3-.2 1.6l4.9 1.5 1.9 5.8c.2.6.4.8.8.8.4 0 .6-.2.9-.5l2.3-2.2 4.8 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.2-.5-1.8-1.2-1.4zM8.2 13.2l9.6-6c.5-.3.9-.1.6.3l-8.2 7.4-.3 3.1-1.4-4.3z"/></svg><b>Spectre 3030</b></a></div></section>
+        <section class="hero"><span class="hero-label">Профит сегодня</span><strong id="profileTodayPnl">0 ₽</strong><div class="hero-row"><div class="hero-sub"><span>За всё время</span><b id="profileTotalPnl">0 ₽</b></div></div></section>
 
         <button id="apiBanner" class="api-banner hidden" onclick="openApiSetup()"><span class="api-banner-ico"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v5M15 3v5M7 8h10v3a5 5 0 0 1-10 0V8Z"/><path d="M12 16v5"/></svg></span><span class="api-banner-text"><b>Подключите T-Invest API</b><small>Сделки будут подтягиваться сами</small></span><span class="api-banner-go">→</span></button>
 
@@ -213,6 +213,128 @@
             <p id="pfUpdated" class="pf-note"></p>
         </div>
 
+    </div>
+
+
+    <!-- АНАЛИЗ СДЕЛКИ -->
+    <div id="analysisPage" class="hidden">
+
+        <section class="an-head">
+            <span class="hero-label">Анализ сделки</span>
+            <div class="an-search">
+                <input id="anTicker" type="text" placeholder="Введите тикер, например Si" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Тикер">
+                <button id="anFind" class="an-go" onclick="anFind()">Найти</button>
+            </div>
+            <p id="anMsg" class="auth-status hidden"></p>
+            <select id="anContract" class="hidden" onchange="anLoadContract(this.value)" aria-label="Контракт"></select>
+        </section>
+
+        <div id="anChartWrap" class="hidden">
+            <div class="an-chart"><iframe id="anChart" title="График" loading="lazy" referrerpolicy="no-referrer" allowfullscreen></iframe></div>
+            <a id="anChartLink" class="an-chart-link" href="#" target="_blank" rel="noopener">Открыть в TradingView ↗</a>
+        </div>
+
+        <div id="anSegDir" class="an-seg an-dir"></div>
+
+        <section id="anScore" class="an-score an-idle">
+            <div class="an-score-top">
+                <div id="anRing" class="an-ring an-red">
+                    <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="rg-bg" cx="60" cy="60" r="52"/><circle id="anRingFg" class="rg-fg" cx="60" cy="60" r="52" transform="rotate(-90 60 60)"/></svg>
+                    <div class="an-ring-num"><b id="anScoreNum">0</b><span>из 100</span></div>
+                </div>
+                <div class="an-score-main">
+                    <span class="an-score-label">Оценка сетапа</span>
+                    <strong id="anVerdict" class="an-red">Не входить</strong>
+                    <p id="anHint" class="an-meta an-hint"></p>
+                </div>
+            </div>
+            <div id="anBars" class="an-bars"></div>
+        </section>
+
+        <section id="anPlan" class="an-plan">
+            <div class="an-grid">
+                <label class="an-field"><span>Вход</span><input id="anEntry" type="text" inputmode="decimal" placeholder="цена"></label>
+                <label class="an-field"><span>Стоп</span><input id="anStop" type="text" inputmode="decimal" placeholder="цена"></label>
+                <label class="an-field"><span>Тейк</span><input id="anTake" type="text" inputmode="decimal" placeholder="цена"></label>
+            </div>
+            <div id="anResult" class="an-result"></div>
+        </section>
+
+        <details id="anMore" class="an-more">
+            <summary>Подробнее</summary>
+            <div class="an-more-body">
+
+                <div class="an-sub">
+                    <h3 class="an-h">Как считается оценка</h3>
+                    <p class="an-meta">Стратегия «отбой от зоны»: направление задаёт тренд D / W, вход ищем на 4H там, где совпало несколько факторов, и только после подтверждения. Лучший вход — коррекция по тренду, импульс не догоняем.</p>
+                    <ul class="an-rules">
+                        <li><b>Контекст · 30</b> — сделка по тренду D / W (до 14), фаза рынка (до 8), нанесены уровни и найден POC (по 4).</li>
+                        <li><b>Зона · 30</b> — по 5 за каждый совпавший фактор: POC, VAH / VAL, узел объёма, отбойные бары, Фибоначчи; ещё 5, если цена уже в зоне.</li>
+                        <li><b>Подтверждение · 20</b> — отбойный бар или паттерн (10) и всплеск объёма (10).</li>
+                        <li><b>Риск · 20</b> — прибыль к риску от 1 : 2 (до 10), потеря в пределах порога (6), стоп покрыт деньгами (4).</li>
+                    </ul>
+                    <p class="an-meta">«Не входить» ставится при любом жёстком нарушении: нет зоны или подтверждения, сделка против тренда без причины, не хватает денег до стопа. Оценка помогает держать дисциплину, прогнозом она не является.</p>
+                </div>
+
+                <div class="an-sub">
+                    <h3 class="an-h">Почему такой вердикт</h3>
+                    <ul id="anIssues" class="an-issues"></ul>
+                    <p id="anAutoNote" class="an-meta hidden"></p>
+                </div>
+
+                <div class="an-sub">
+                    <h3 class="an-h">Риск и портфель</h3>
+                    <div class="an-grid two">
+                        <label class="an-field"><span>Портфель, ₽</span><input id="anPortfolio" type="text" inputmode="decimal" placeholder="40 000"></label>
+                        <label class="an-field"><span>Свободные деньги, ₽</span><input id="anFree" type="text" inputmode="decimal" placeholder="40 000"></label>
+                        <label class="an-field"><span>Доля в сделке, %</span><input id="anShare" type="text" inputmode="decimal"></label>
+                        <label class="an-field"><span>Порог потери, %</span><input id="anRiskLimit" type="text" inputmode="decimal"></label>
+                    </div>
+                    <div id="anResultMore" class="an-res"></div>
+                </div>
+
+                <div class="an-sub">
+                    <h3 class="an-h">Контракт</h3>
+                    <p id="anContractLine" class="an-meta"></p>
+                    <details id="anDetails" class="an-details">
+                        <summary>Параметры контракта (заполняются сами)</summary>
+                        <div class="an-grid two">
+                            <label class="an-field"><span>ГО на покупку, ₽</span><input id="anGoBuy" type="text" inputmode="decimal"></label>
+                            <label class="an-field"><span>ГО на продажу, ₽</span><input id="anGoSell" type="text" inputmode="decimal"></label>
+                            <label class="an-field"><span>Шаг цены, пунктов</span><input id="anStep" type="text" inputmode="decimal"></label>
+                            <label class="an-field"><span>Стоимость шага, ₽</span><input id="anStepAmt" type="text" inputmode="decimal"></label>
+                        </div>
+                    </details>
+                    <details id="anFound" class="an-details hidden">
+                        <summary>Что нашёл алгоритм</summary>
+                        <div id="anFoundBody" class="an-found"></div>
+                    </details>
+                </div>
+
+                <div class="an-sub">
+                    <h3 class="an-h">1. Контекст · D / W</h3>
+                    <div><p class="an-sublabel">Глобальный тренд</p><div id="anSegTrend" class="an-seg"></div></div>
+                    <div><p class="an-sublabel">Фаза рынка</p><div id="anSegPhase" class="an-seg"></div></div>
+                    <div id="anCtxChecks" class="an-checks"></div>
+                </div>
+
+                <div class="an-sub">
+                    <h3 class="an-h">2. Зона входа · 4H</h3>
+                    <div id="anZoneChecks" class="an-checks"></div>
+                    <p id="anZoneLine" class="an-meta"></p>
+                </div>
+
+                <div class="an-sub">
+                    <h3 class="an-h">3. Подтверждение</h3>
+                    <div id="anConfChecks" class="an-checks"></div>
+                    <p id="anAlign" class="an-meta"></p>
+                    <input id="anReason" class="hidden" type="text" placeholder="Причина торговать против тренда" autocomplete="off">
+                </div>
+
+                <button class="an-reset" onclick="anReset()">Сбросить мои правки</button>
+                <p class="an-note">Это инструмент дисциплины и расчёта, а не инвестиционная рекомендация.</p>
+            </div>
+        </details>
     </div>
 
     <!-- ВСЕ СДЕЛКИ -->
@@ -723,6 +845,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
 <script src="app.js"></script>
+<script src="ui.js"></script>
 <script>
 /* Вход по email: код из письма + ссылка, понятные ошибки, защита от частых запросов */
 (function () {

@@ -3567,13 +3567,18 @@ const PF_SYMBOLS = { RUB: "₽", USD: "$", EUR: "€", CNY: "¥", HKD: "HK$", GB
 function hidePortfolioPage() {
     const page = document.getElementById("portfolioPage");
     if (page) page.classList.add("hidden");
+    const an = document.getElementById("analysisPage");
+    if (an) an.classList.add("hidden");
+    const anNav = document.getElementById("analysisNav");
+    if (anNav) anNav.classList.remove("active");
     const nav = document.getElementById("portfolioNav");
     if (nav) nav.classList.remove("active");
 }
 
 function showPortfolio() {
-    ["homePage", "profilePage", "allTradesPage", "tradePage", "tradeDetails", "settingsPage"]
+    ["homePage", "profilePage", "allTradesPage", "tradePage", "tradeDetails", "settingsPage", "analysisPage"]
         .forEach(id => document.getElementById(id).classList.add("hidden"));
+    document.getElementById("analysisNav").classList.remove("active");
     ["homeNav", "profileNav", "settingsNav"]
         .forEach(id => document.getElementById(id).classList.remove("active"));
 
@@ -3692,6 +3697,7 @@ async function loadPortfolio() {
         portfolioData = result;
         portfolioLoadedAt = Date.now();
         renderPortfolio();
+        if (typeof anOnPortfolio === "function") anOnPortfolio();
 
     } catch (e) {
         console.error("loadPortfolio error:", e);
@@ -3851,4 +3857,729 @@ function renderPositionCard(p) {
             ${stats.map(s => `<div><span>${s[0]}</span><b>${s[1]}</b></div>`).join("")}
         </div>${margin}
     </div>`;
+}
+
+// =========================================
+// АНАЛИЗ СДЕЛКИ: чек-лист стратегии + калькулятор по фьючерсам
+// Стратегия: объём + уровни + подтверждение.
+// =========================================
+
+const AN_CHECKS = {
+    ctx: [
+        ["levels", "Ключевые уровни нанесены (экстремумы, зоны S/R)"],
+        ["poc", "Профиль объёма растянут, POC найден"]
+    ],
+    zone: [
+        ["z_poc", "POC"],
+        ["z_va", "VAH / VAL"],
+        ["z_node", "Узел повышенного объёма"],
+        ["z_bars", "Отбойные бары на уровне"],
+        ["z_fib", "Фибоначчи 0.5 / 0.618 / 0.786"]
+    ],
+    conf: [
+        ["c_bar", "Отбойный бар или паттерн разворота"],
+        ["c_vol", "Всплеск объёма на реакции"]
+    ]
+};
+const AN_ZONE_KEYS = ["z_poc", "z_va", "z_node", "z_bars", "z_fib"];
+const AN_ZONE_NAMES = ["нет", "слабая", "нормальная", "сильная"];
+
+const anState = { dir: "long", trend: "", phase: "", reason: "", checks: {} };
+const anTouched = { portfolio: false, free: false };
+let anInited = false;
+let anContracts = [];
+let anAnalysis = null;      // последний автоанализ по свечам
+let anCurrentUid = null;    // контракт, который отслеживаем
+let anLoadedAt = 0;
+let anTimer = null;
+let anRestored = false;
+const anManual = new Set(); // то, что пользователь поменял сам: авто это не трогает
+
+const AN_TREND = { up: "вверх", down: "вниз", flat: "флэт" };
+const AN_PHASE = { impulse: "импульс", pullback: "коррекция", range: "флэт" };
+
+function anInit() {
+    if (anInited) return;
+    anInited = true;
+
+    anBuildSeg("anSegDir", "dir", [["long", "Лонг"], ["short", "Шорт"]]);
+    anBuildSeg("anSegTrend", "trend", [["up", "Вверх"], ["down", "Вниз"], ["flat", "Флэт"]]);
+    anBuildSeg("anSegPhase", "phase", [["impulse", "Импульс"], ["pullback", "Коррекция"], ["range", "Флэт"]]);
+
+    anBuildChecks("anCtxChecks", AN_CHECKS.ctx);
+    anBuildChecks("anZoneChecks", AN_CHECKS.zone);
+    anBuildChecks("anConfChecks", AN_CHECKS.conf);
+
+    // сохранённые настройки: доля портфеля и порог потери
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem("anSettings") || "{}"); } catch (e) { /* пусто */ }
+    document.getElementById("anShare").value = saved.share || 10;
+    document.getElementById("anRiskLimit").value = saved.limit || 3;
+
+    const page = document.getElementById("analysisPage");
+    page.addEventListener("input", anOnInput);
+    page.addEventListener("click", anOnClick);
+    document.getElementById("anTicker").addEventListener("keydown", e => {
+        if (e.key === "Enter") anFind();
+    });
+
+    anSyncSegs();
+}
+
+function anBuildSeg(id, key, options) {
+    document.getElementById(id).innerHTML = options.map(o =>
+        `<button type="button" data-key="${key}" data-v="${o[0]}">${o[1]}</button>`).join("");
+}
+
+function anBuildChecks(id, list) {
+    document.getElementById(id).innerHTML = list.map(c =>
+        `<label class="an-check"><input type="checkbox" data-k="${c[0]}"><span class="an-box"></span><span>${c[1]}</span></label>`).join("");
+}
+
+function anSyncSegs() {
+    document.querySelectorAll("#analysisPage .an-seg button").forEach(b => {
+        b.classList.toggle("active", anState[b.dataset.key] === b.dataset.v);
+    });
+}
+
+
+function anOnClick(e) {
+    const b = e.target.closest(".an-seg button");
+    if (!b) return;
+    const key = b.dataset.key, v = b.dataset.v;
+    // направление переключается всегда, остальное можно снять повторным нажатием
+    anState[key] = key === "dir" ? v : (anState[key] === v ? "" : v);
+    if (key !== "dir") anManual.add(key);
+    anSyncSegs();
+    // при смене направления автоанализ подставляет другую зону и план
+    if (key === "dir") anApplyAnalysis(); else anUpdate();
+}
+
+
+function anOnInput(e) {
+    const t = e.target;
+    if (t.dataset && t.dataset.k) {
+        anState.checks[t.dataset.k] = t.checked;
+        anManual.add(t.dataset.k);
+    }
+    if (t.id === "anReason") anState.reason = t.value;
+    if (t.id === "anEntry") anManual.add("entry");
+    if (t.id === "anStop") anManual.add("stop");
+    if (t.id === "anTake") anManual.add("take");
+    if (t.id === "anPortfolio") anTouched.portfolio = true;
+    if (t.id === "anFree") anTouched.free = true;
+    if (t.id === "anShare" || t.id === "anRiskLimit") {
+        try {
+            localStorage.setItem("anSettings", JSON.stringify({
+                share: anNum("anShare") || 10,
+                limit: anNum("anRiskLimit") || 3
+            }));
+        } catch (err) { /* не критично */ }
+    }
+    anUpdate();
+}
+
+
+function showAnalysis() {
+    anInit();
+
+    ["homePage", "profilePage", "allTradesPage", "tradePage", "tradeDetails", "settingsPage", "portfolioPage"]
+        .forEach(id => document.getElementById(id).classList.add("hidden"));
+    ["homeNav", "profileNav", "settingsNav", "portfolioNav"]
+        .forEach(id => document.getElementById(id).classList.remove("active"));
+
+    document.getElementById("analysisPage").classList.remove("hidden");
+    document.getElementById("analysisNav").classList.add("active");
+
+    if (portfolioData) anOnPortfolio();
+    else if (!portfolioLoading) loadPortfolio();
+
+    // при первом открытии возвращаем последний тикер и сразу всё считаем
+    if (!anRestored) {
+        anRestored = true;
+        let saved = "";
+        try { saved = localStorage.getItem("anLastTicker") || ""; } catch (e) { /* пусто */ }
+        if (saved) {
+            document.getElementById("anTicker").value = saved;
+            anFind();
+        }
+    } else if (anCurrentUid && Date.now() - anLoadedAt > 60000) {
+        anLoadContract(anCurrentUid, true);
+    }
+
+    anUpdate();
+    if (anChartTicker) anRenderChart();
+    window.scrollTo(0, 0);
+}
+
+// подставляем портфель и свободные рубли, пока пользователь не ввёл свои
+function anOnPortfolio() {
+    if (!portfolioData || !anInited) return;
+
+    const p = document.getElementById("anPortfolio");
+    const f = document.getElementById("anFree");
+
+    if (!anTouched.portfolio) p.value = Math.round(portfolioData.totals.portfolio);
+    if (!anTouched.free) {
+        const rub = portfolioData.cash.find(c => c.currency === "RUB");
+        f.value = rub ? Math.round(rub.available) : "";
+    }
+    anUpdate();
+}
+
+// ---------- числа и формат ----------
+
+function anNum(id) {
+    const v = parseFloat(String(document.getElementById(id).value).replace(/\s/g, "").replace(",", "."));
+    return isFinite(v) ? v : NaN;
+}
+
+function anRub(n, signed) {
+    return (signed && n > 0 ? "+" : "") + pfNum(n, Math.abs(n) >= 1000 ? 0 : 2) + " ₽";
+}
+
+function anPx(n) {
+    return Number(n).toLocaleString("ru-RU", { maximumFractionDigits: 2 });
+}
+
+function anEsc(s) { return pfEsc(s); }
+
+// ---------- вердикт по стратегии ----------
+
+// Оценка 0–100: контекст 30 + зона 30 + подтверждение 20 + риск 20
+function anScoreParts(ev, calc) {
+    const c = anState.checks;
+
+    let ctx = 0;
+    if (anState.trend) {
+        if (ev.counter) ctx += anState.reason.trim() ? 4 : 0;
+        else if (anState.trend === "flat") ctx += 8;
+        else ctx += 14;
+    }
+    ctx += ({ pullback: 8, range: anState.trend === "flat" ? 6 : 3, impulse: 2 })[anState.phase] || 0;
+    if (c.levels) ctx += 4;
+    if (c.poc) ctx += 4;
+
+    const plan = anAnalysis && anAnalysis.plans ? anAnalysis.plans[anState.dir] : null;
+    const zone = Math.min(ev.zoneCount, 5) * 5 + (plan && plan.inZone ? 5 : 0);
+
+    const conf = (c.c_bar ? 10 : 0) + (c.c_vol ? 10 : 0);
+
+    let risk = 0;
+    if (calc.state === "ok") {
+        risk += calc.rr >= 2 ? 10 : calc.rr >= 1.5 ? 7 : calc.rr >= 1 ? 4 : 0;
+        risk += (!(calc.limit > 0) || calc.lossPct <= calc.limit) ? 6 : 0;
+        risk += calc.loss <= calc.cushion ? 4 : calc.loss <= calc.buffer ? 2 : 0;
+    }
+
+    return [
+        { k: "Контекст", v: ctx, max: 30 },
+        { k: "Зона", v: zone, max: 30 },
+        { k: "Подтверждение", v: conf, max: 20 },
+        { k: "Риск", v: risk, max: 20 }
+    ];
+}
+
+function anEvaluate() {
+    const c = anState.checks;
+    const issues = [];
+
+    const missing = [];
+    if (!anState.trend) missing.push("тренд");
+    if (!anState.phase) missing.push("фаза");
+    if (!c.levels) missing.push("ключевые уровни");
+    if (!c.poc) missing.push("POC");
+    if (missing.length) issues.push({ level: "warn", text: "Контекст D/W: не отмечено — " + missing.join(", ") });
+
+    const zoneCount = AN_ZONE_KEYS.filter(k => c[k]).length;
+    if (zoneCount === 0) issues.push({ level: "bad", text: "Нет зоны входа: отметьте факторы, которые совпали на 4H" });
+    else if (zoneCount === 1) issues.push({ level: "warn", text: "Зона слабая: совпал только один фактор" });
+
+    if (!c.c_bar) issues.push({ level: "bad", text: "Нет подтверждения: отбойного бара или паттерна разворота" });
+    if (!c.c_vol) issues.push({ level: "bad", text: "Нет подтверждения: всплеска объёма на реакции" });
+
+    const counter = (anState.dir === "long" && anState.trend === "down") ||
+                    (anState.dir === "short" && anState.trend === "up");
+    if (counter) {
+        if (!anState.reason.trim()) issues.push({ level: "bad", text: "Сделка против старшего тренда: укажите причину" });
+        else issues.push({ level: "warn", text: "Сделка против старшего тренда (причина указана)" });
+    }
+
+    if (anState.phase === "impulse" && !counter) {
+        issues.push({ level: "warn", text: "Цена в импульсе: лучше дождаться коррекции к зоне, а не догонять" });
+    }
+
+    const calc = anCalc();
+    if (calc.state === "ok") {
+        if (calc.loss > calc.buffer) issues.push({ level: "bad", text: "Свободных денег не хватит дойти до стопа: уменьшите объём или сдвиньте стоп" });
+        if (calc.rr < 1.5) issues.push({ level: "warn", text: "Прибыль к риску " + "1 : " + pfNum(calc.rr, 2) + ": ищите тейк дальше (цель — от 1 : 2)" });
+        if (calc.limit > 0 && calc.lossPct > calc.limit) issues.push({ level: "warn", text: "Потеря по стопу " + pfNum(calc.lossPct, 2) + "% выше порога " + pfNum(calc.limit, 1) + "%" });
+    } else if (calc.state === "error") {
+        issues.push({ level: "bad", text: calc.msg });
+    }
+
+    const base = { counter, zoneCount };
+    const parts = anScoreParts(base, calc);
+    const score = parts.reduce((s, p) => s + p.v, 0);
+
+    let verdict, cls;
+    if (issues.some(i => i.level === "bad")) { verdict = "Не входить"; cls = "an-red"; }
+    else if (issues.length || score < 60) { verdict = "С осторожностью"; cls = "an-amber"; }
+    else {
+        verdict = "Сильный сетап"; cls = "an-green";
+        issues.push({ level: "ok", text: "Контекст, зона, подтверждение и риск на месте" });
+    }
+    const order = { bad: 0, warn: 1, ok: 2 };
+    issues.sort((a, b) => order[a.level] - order[b.level]);
+
+    return { verdict, cls, issues, zoneCount, counter, score, parts };
+}
+
+// ---------- расчёт сделки по фьючерсу ----------
+
+function anCalc() {
+    const dir = anState.dir;
+    const E = anNum("anEntry"), S = anNum("anStop"), T = anNum("anTake");
+    const portfolio = anNum("anPortfolio"), free = anNum("anFree");
+    const share = anNum("anShare"), limit = anNum("anRiskLimit");
+    const go = anNum(dir === "long" ? "anGoBuy" : "anGoSell");
+    const step = anNum("anStep"), stepAmt = anNum("anStepAmt");
+
+    if (!(go > 0) || !(step > 0) || !(stepAmt > 0)) {
+        return { state: "empty", msg: "Введите тикер и нажмите «Найти»: вход, стоп, тейк и расчёт риска подставятся сами." };
+    }
+    if (!(E > 0) || !(S > 0) || !(T > 0)) {
+        return { state: "empty", msg: "Укажите вход, стоп и тейк." };
+    }
+    if (!(portfolio > 0) || !(share > 0)) {
+        return { state: "empty", msg: "Укажите стоимость портфеля и долю в сделке (раздел «Подробнее»)." };
+    }
+
+    const okSide = dir === "long" ? (S < E && T > E) : (T < E && E < S);
+    if (!okSide) {
+        return {
+            state: "error",
+            msg: dir === "long"
+                ? "Для лонга стоп должен быть ниже входа, а тейк выше."
+                : "Для шорта стоп должен быть выше входа, а тейк ниже."
+        };
+    }
+
+    const pv = stepAmt / step;                 // рублей за 1 пункт у одного контракта
+    const stopPts = Math.abs(E - S);
+    const takePts = Math.abs(T - E);
+    const amount = portfolio * share / 100;    // капитал, выделенный на сделку
+    const n = Math.floor(amount / go);
+
+    if (n < 1) {
+        const needPct = Math.ceil(go / portfolio * 100);
+        return {
+            state: "error",
+            msg: `Не хватает на 1 контракт: ГО ${anRub(go)}, а в сделке ${anRub(amount)} (${pfNum(share, 1)}% портфеля). Нужно хотя бы ${needPct}% портфеля.`
+        };
+    }
+
+    const loss = n * stopPts * pv;
+    const profit = n * takePts * pv;
+    const rr = takePts / stopPts;
+    const notional = n * E * pv;
+    const leverage = notional / amount;
+    const used = n * go;
+    const cushion = amount - used;             // свободный запас внутри суммы сделки
+    const buffer = isFinite(free) ? Math.max(0, free - used) : cushion;
+    const lossPct = loss / portfolio * 100;
+    const profitPct = profit / portfolio * 100;
+
+    const move = (money) => money / (n * pv);  // сколько пунктов выдержит запас
+    const priceAt = (pts) => dir === "long" ? E - pts : E + pts;
+
+    return {
+        state: "ok", n, go, pv, amount, used, loss, profit, rr, notional, leverage,
+        cushion, buffer, lossPct, profitPct, limit, stopPts,
+        cushionPts: move(cushion), bufferPts: move(buffer),
+        cushionPx: priceAt(move(cushion)), bufferPx: priceAt(move(buffer)),
+        dir, free
+    };
+}
+
+function anRenderResult() {
+    const el = document.getElementById("anResult");
+    const more = document.getElementById("anResultMore");
+    const r = anCalc();
+
+    if (r.state === "empty") { el.innerHTML = `<p class="an-empty">${r.msg}</p>`; more.innerHTML = ""; return; }
+    if (r.state === "error") { el.innerHTML = `<div class="an-chips"><div class="an-chip bad">${r.msg}</div></div>`; more.innerHTML = ""; return; }
+
+    const chips = [];
+
+    if (r.limit > 0 && r.lossPct > r.limit) {
+        const streak = (1 - Math.pow(1 - r.lossPct / 100, 5)) * 100;
+        chips.push(["warn", `Потеря по стопу ${pfNum(r.lossPct, 2)}% портфеля выше вашего порога ${pfNum(r.limit, 1)}%. Пять таких стопов подряд — около −${pfNum(streak, 1)}% портфеля.`]);
+    }
+
+    if (r.loss <= r.cushion) {
+        chips.push(["ok", "Стоп покрывается деньгами, выделенными на сделку."]);
+    } else if (r.loss <= r.buffer) {
+        chips.push(["warn", "Потеря по стопу больше суммы сделки: покрывается за счёт других свободных денег на счёте."]);
+    } else {
+        chips.push(["bad", "Свободных денег не хватит, чтобы дойти до стопа: брокер может закрыть позицию раньше. Уменьшите объём или сдвиньте стоп."]);
+    }
+
+    if (r.rr < 1) chips.push(["warn", "Тейк ближе стопа: риск больше потенциальной прибыли."]);
+
+    el.innerHTML = `
+        <div class="an-tiles">
+            <div class="an-tile"><span>Контрактов</span><b>${r.n}</b><small>ГО ${anRub(r.used)}</small></div>
+            <div class="an-tile"><span>Прибыль к риску</span><b>1 : ${pfNum(r.rr, 2)}</b><small>${r.dir === "long" ? "лонг" : "шорт"}</small></div>
+            <div class="an-tile"><span>Потеря по стопу</span><b class="pf-down">−${anRub(r.loss)}</b><small>${pfNum(r.lossPct, 2)}% портфеля</small></div>
+            <div class="an-tile"><span>Прибыль у тейка</span><b class="pf-up">+${anRub(r.profit)}</b><small>${pfNum(r.profitPct, 2)}% портфеля</small></div>
+        </div>
+        <div class="an-chips">${chips.map(c => `<div class="an-chip ${c[0]}">${c[1]}</div>`).join("")}</div>`;
+
+    const lvl = px => px > 0 ? "≈ " + anPx(px) : "недостижимо";
+    let liq = `<div class="an-res-row"><span>Запас до исчерпания средств сделки</span><b>~${anPx(r.cushionPts)} п. (${lvl(r.cushionPx)})</b></div>`;
+    if (r.buffer > r.cushion + 0.5) {
+        liq += `<div class="an-res-row"><span>С учётом свободных денег счёта</span><b>~${anPx(r.bufferPts)} п. (${lvl(r.bufferPx)})</b></div>`;
+    }
+    more.innerHTML = `
+        <div class="an-res-row"><span>Размер позиции · плечо</span><b>${anRub(r.notional)} · ×${pfNum(r.leverage, 1)}</b></div>
+        ${liq}
+        <p class="an-meta">Оценка без учёта комиссий и проскальзывания. Запас — приближение, а не точная цена принудительного закрытия.</p>`;
+}
+
+// ---------- общий перерисовщик ----------
+
+function anUpdate() {
+    if (!anInited) return;
+
+    const ev = anEvaluate();
+    const v = document.getElementById("anVerdict");
+    v.textContent = ev.verdict;
+    v.className = ev.cls;
+    document.getElementById("anIssues").innerHTML =
+        ev.issues.map(i => `<li class="${i.level}">${anEsc(i.text)}</li>`).join("");
+
+    // коротко под вердиктом — главная причина; полный список в «Подробнее»
+    document.getElementById("anHint").textContent = ev.issues.length ? ev.issues[0].text : "";
+    document.getElementById("anScore").classList.toggle("an-idle", !anCurrentUid && !anManual.size);
+
+    // кольцо и полоски по четырём блокам
+    const ring = document.getElementById("anRing");
+    const fg = document.getElementById("anRingFg");
+    const circ = 2 * Math.PI * 52;
+    ring.className = "an-ring " + ev.cls;
+    fg.style.strokeDasharray = circ;
+    fg.style.strokeDashoffset = circ * (1 - ev.score / 100);
+    document.getElementById("anScoreNum").textContent = ev.score;
+    document.getElementById("anBars").innerHTML = ev.parts.map(p => {
+        const r = p.v / p.max;
+        const tone = r >= 0.7 ? "hi" : r >= 0.4 ? "mid" : "lo";
+        return `<div class="an-bar ${tone}"><span>${p.k}</span><i><u style="width:${Math.round(r * 100)}%"></u></i><b>${p.v}/${p.max}</b></div>`;
+    }).join("");
+
+    document.getElementById("anZoneLine").textContent =
+        "Сила зоны: " + AN_ZONE_NAMES[Math.min(ev.zoneCount, 3)] + " (совпало " + ev.zoneCount + " из 5)";
+
+    const align = document.getElementById("anAlign");
+    if (!anState.trend) align.textContent = "Выберите тренд на D / W, чтобы проверить направление сделки.";
+    else if (ev.counter) align.textContent = "⚠ Сделка против старшего тренда — нужна понятная причина.";
+    else if (anState.trend === "flat") align.textContent = "Флэт: торгуем от границ диапазона.";
+    else align.textContent = "✓ Направление совпадает со старшим трендом.";
+
+    const reason = document.getElementById("anReason");
+    reason.classList.toggle("hidden", !ev.counter);
+
+    anRenderResult();
+}
+
+// ---------- контракт: поиск и параметры ----------
+
+async function anCall(body) {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) return { ok: false, error: "Нет активной сессии" };
+
+    const res = await fetch(functionsUrl("get-tinkoff-portfolio"), {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + session.access_token
+        },
+        body: JSON.stringify(body)
+    });
+
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* не JSON */ }
+    return res.ok ? { ok: true, data } : { ok: false, error: data.error || "Ошибка запроса", code: data.code };
+}
+
+function anMsg(text, isError) {
+    showAuthStatus("anMsg", text, isError);
+}
+
+async function anFind() {
+    const q = document.getElementById("anTicker").value.trim();
+    const btn = document.getElementById("anFind");
+    const sel = document.getElementById("anContract");
+    document.getElementById("anMsg").classList.add("hidden");
+
+    if (!q) { anMsg("Введите тикер, например Si", true); return; }
+
+    btn.disabled = true;
+    btn.textContent = "Ищу…";
+
+    try {
+        const r = await anCall({ action: "futures_search", query: q });
+
+        if (!r.ok) {
+            if (r.code === "no_token") {
+                anMsg("Токен T-Invest не подключён: заполните параметры контракта вручную.", true);
+                document.getElementById("anMore").open = true;
+                    document.getElementById("anDetails").open = true;
+            } else {
+                anMsg(r.error, true);
+            }
+            return;
+        }
+
+        anContracts = r.data.contracts || [];
+        if (!anContracts.length) {
+            sel.classList.add("hidden");
+            anMsg("Фьючерс не найден. Проверьте тикер.", true);
+            return;
+        }
+
+        sel.innerHTML = anContracts.map(c => {
+            const exp = c.expiration ? " · до " + new Date(c.expiration).toLocaleDateString("ru-RU") : "";
+            return `<option value="${anEsc(c.uid)}">${anEsc(c.ticker)} — ${anEsc(c.name)}${exp}</option>`;
+        }).join("");
+        sel.classList.toggle("hidden", anContracts.length < 2);
+        sel.value = anContracts[0].uid;
+
+        try { localStorage.setItem("anLastTicker", q); } catch (e) { /* не критично */ }
+        await anLoadContract(anContracts[0].uid);
+    } catch (e) {
+        console.error("anFind error:", e);
+        anMsg("Ошибка сети. Попробуйте ещё раз.", true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Найти";
+    }
+}
+
+
+async function anLoadContract(uid, silent) {
+    if (!uid) return;
+    if (!silent) document.getElementById("anMsg").classList.add("hidden");
+
+    try {
+        const r = await anCall({ action: "futures_analyze", uid });
+        if (!r.ok) {
+            if (!silent) anMsg(r.error, true);
+            return;
+        }
+
+        const d = r.data.details;
+        const c = anContracts.find(x => x.uid === uid) || {};
+
+        // другой контракт — другой масштаб цен: план считаем заново
+        if (anCurrentUid && anCurrentUid !== uid) {
+            ["entry", "stop", "take"].forEach(k => anManual.delete(k));
+            ["anEntry", "anStop", "anTake"].forEach(id => { document.getElementById(id).value = ""; });
+        }
+        anCurrentUid = uid;
+        anLoadedAt = Date.now();
+
+        // параметры контракта берём у брокера (при тихом обновлении не трогаем: пользователь мог их поправить)
+        if (!silent) {
+            document.getElementById("anGoBuy").value = d.marginBuy || "";
+            document.getElementById("anGoSell").value = d.marginSell || "";
+            document.getElementById("anStep").value = d.step || "";
+            document.getElementById("anStepAmt").value = d.stepAmount || "";
+        }
+
+        anAnalysis = r.data.analysis || null;
+        if (!anAnalysis && !silent) {
+            anMsg("Автоанализ недоступен (" + (r.data.analysisError || "нет данных") + "). Отметки и цены можно ввести вручную.", true);
+        }
+
+        const parts = [anEsc(c.ticker || document.getElementById("anTicker").value.toUpperCase()),
+            "ГО " + anRub(d.marginBuy) + " / " + anRub(d.marginSell)];
+        if (d.pointValue) parts.push("1 пункт = " + anRub(d.pointValue));
+        if (d.lastPrice) parts.push("цена " + anPx(d.lastPrice));
+        parts.push("обновлено " + new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }));
+        document.getElementById("anContractLine").innerHTML = parts.join(" · ");
+
+        // нет автоанализа — хотя бы подставим цену как вход
+        if (!anAnalysis && d.lastPrice && !anManual.has("entry") && !document.getElementById("anEntry").value) {
+            document.getElementById("anEntry").value = d.lastPrice;
+        }
+
+        anRenderChart(c.ticker || document.getElementById("anTicker").value);
+        anApplyAnalysis();
+        anStartTimer();
+    } catch (e) {
+        console.error("anLoadContract error:", e);
+        if (!silent) anMsg("Не удалось получить данные по контракту.", true);
+    }
+}
+
+// ---------- график ----------
+// TradingView: продолжение фьючерса вида MOEX:SI1!, по умолчанию 4H (как зона входа в стратегии)
+let anChartKey = "";
+let anChartTicker = "";
+
+function anChartSymbol(ticker) {
+    let s = String(ticker || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const m = s.match(/^([A-Z0-9]{2,4}?)[FGHJKMNQUVXZ]\d{1,2}$/); // SiZ6 -> SI
+    if (m) s = m[1];
+    return s ? "MOEX:" + s + "1!" : "";
+}
+
+function anRenderChart(ticker) {
+    const wrap = document.getElementById("anChartWrap");
+    if (ticker) anChartTicker = ticker;
+    const symbol = anChartSymbol(anChartTicker);
+    if (!symbol) { wrap.classList.add("hidden"); return; }
+
+    const theme = document.documentElement.classList.contains("light-theme") ? "light" : "dark";
+    const key = symbol + "|" + theme;
+    wrap.classList.remove("hidden");
+    if (key === anChartKey) return;   // тихие обновления раз в минуту не перезагружают график
+    anChartKey = key;
+
+    const p = new URLSearchParams({
+        symbol: symbol,
+        interval: "240",
+        theme: theme,
+        style: "1",
+        locale: "ru",
+        timezone: "Europe/Moscow",
+        hidesidetoolbar: "1",
+        symboledit: "0",
+        saveimage: "0",
+        withdateranges: "1"
+    });
+    document.getElementById("anChart").src = "https://s.tradingview.com/widgetembed/?" + p.toString();
+    document.getElementById("anChartLink").href =
+        "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(symbol);
+}
+
+function anStartTimer() {
+    if (anTimer) return;
+    anTimer = setInterval(async () => {
+        if (document.hidden || !anCurrentUid) return;
+        if (document.getElementById("analysisPage").classList.contains("hidden")) return;
+        await anLoadContract(anCurrentUid, true);
+    }, 60000);
+}
+
+function anSetCheck(key, value) {
+    anState.checks[key] = !!value;
+    const el = document.querySelector('#analysisPage input[data-k="' + key + '"]');
+    if (el) el.checked = !!value;
+}
+
+// Выставляет отметки и цены по автоанализу. Всё, что пользователь менял сам, не трогаем.
+function anApplyAnalysis() {
+    const A = anAnalysis;
+    if (!A) { anRenderFound(); anUpdate(); return; }
+
+    const auto = (key, fn) => { if (!anManual.has(key)) fn(); };
+
+    auto("trend", () => { anState.trend = A.trend; });
+    auto("phase", () => { anState.phase = A.phase; });
+    auto("levels", () => anSetCheck("levels", A.levels.length >= 2));
+    auto("poc", () => anSetCheck("poc", !!A.profile));
+
+    const plan = A.plans[anState.dir];
+    const factors = plan ? plan.zone.factors : [];
+    AN_ZONE_KEYS.forEach(k => auto(k, () => anSetCheck(k, factors.indexOf(k) !== -1)));
+
+    const cf = A.confirm[anState.dir];
+    auto("c_bar", () => anSetCheck("c_bar", cf.bar));
+    auto("c_vol", () => anSetCheck("c_vol", cf.vol));
+
+    const field = (key, id, val) => auto(key, () => {
+        document.getElementById(id).value = val == null ? "" : val;
+    });
+    field("entry", "anEntry", plan ? plan.entry : A.price);
+    field("stop", "anStop", plan ? plan.stop : "");
+    field("take", "anTake", plan ? plan.take : "");
+
+    anSyncSegs();
+    anRenderFound();
+    anUpdate();
+}
+
+// Показываем, что именно нашёл алгоритм, чтобы это можно было сверить с графиком
+function anRenderFound() {
+    const box = document.getElementById("anFound");
+    const note = document.getElementById("anAutoNote");
+    const A = anAnalysis;
+
+    if (!A) {
+        box.classList.add("hidden");
+        note.classList.add("hidden");
+        return;
+    }
+    box.classList.remove("hidden");
+    note.classList.remove("hidden");
+    note.textContent = "Отметки и цены выставлены автоматически по свечам T-Invest (D / W / 4H) и обновляются раз в минуту. Если поменяете что-то сами, это больше не перезаписывается.";
+
+    const plan = A.plans[anState.dir];
+    const cf = A.confirm[anState.dir];
+    const row = (label, html) => `<div class="an-found-row"><span>${label}</span>${html}</div>`;
+    const dirName = anState.dir === "long" ? "лонга" : "шорта";
+
+    let html = "";
+    html += row("Тренд D / W", `<b>${AN_TREND[A.trend]}, фаза: ${AN_PHASE[A.phase]}<small>${anEsc(A.trendDetail)}</small></b>`);
+
+    if (A.levels.length) {
+        html += row("Ключевые уровни", `<div class="an-tags">${A.levels.map(l =>
+            `<span class="an-tag ${l.kind}">${anPx(l.price)}${l.touches > 1 ? " ×" + l.touches : ""}</span>`).join("")}</div>`);
+    }
+
+    if (A.profile) {
+        const p = A.profile;
+        html += row("Профиль объёма 4H (30 дней)",
+            `<b>POC ${anPx(p.poc)} · VAH ${anPx(p.vah)} · VAL ${anPx(p.val)}` +
+            (p.nodes.length ? `<small>Узлы: ${p.nodes.map(anPx).join(", ")}</small>` : "") + `</b>`);
+    }
+
+    if (A.fib) {
+        html += row("Фибоначчи (последний импульс)",
+            `<b>${A.fib.up ? "вверх" : "вниз"} ${anPx(A.fib.lo)} – ${anPx(A.fib.hi)}<small>` +
+            A.fib.levels.map(f => f.r + " → " + anPx(f.price)).join(" · ") + `</small></b>`);
+    }
+
+    if (A.zones.length) {
+        html += row("Ближайшие зоны", `<b>` + A.zones.map(z =>
+            `${anPx(z.lo)} – ${anPx(z.hi)} · ${z.count} ${z.count === 1 ? "фактор" : "фактора"}: ${anEsc(z.labels.join(", "))}` +
+            (z.level ? " + уровень D/W" : "")).join("<br>") + `</b>`);
+    }
+
+    if (plan) {
+        html += row("Зона для " + dirName,
+            `<b>${anPx(plan.zone.lo)} – ${anPx(plan.zone.hi)}: ${plan.inZone ? "цена в зоне" : "цена пока не дошла до зоны"}` +
+            `<small>Тейк: ${anEsc(plan.takeNote)}</small></b>`);
+    } else {
+        html += row("Зона для " + dirName, `<b>Рядом нет подходящей зоны<small>Вход не предлагается — ждём, пока цена подойдёт к зоне.</small></b>`);
+    }
+    html += row("Подтверждение", `<b>${anEsc(cf.desc)}</b>`);
+
+    document.getElementById("anFoundBody").innerHTML = html;
+}
+
+
+function anReset() {
+    anState.trend = "";
+    anState.phase = "";
+    anState.reason = "";
+    anState.checks = {};
+    anManual.clear();
+    document.querySelectorAll("#analysisPage .an-check input").forEach(i => { i.checked = false; });
+    ["anReason", "anEntry", "anStop", "anTake"].forEach(id => { document.getElementById(id).value = ""; });
+    anSyncSegs();
+    // возвращаем значения автоанализа
+    anApplyAnalysis();
 }
