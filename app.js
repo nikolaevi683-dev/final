@@ -425,9 +425,6 @@ function showHome() {
         .classList.add("active");
 
 
-    document
-        .getElementById("profileNav")
-        .classList.remove("active");
 
 
     document
@@ -436,59 +433,6 @@ function showHome() {
 
 
     renderCalendar();
-}
-
-
-function showProfile() {
-
-    hidePortfolioPage();
-
-    document
-        .getElementById("homePage")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("profilePage")
-        .classList.remove("hidden");
-
-
-    document
-        .getElementById("allTradesPage")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("tradePage")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("tradeDetails")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("settingsPage")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("homeNav")
-        .classList.remove("active");
-
-
-    document
-        .getElementById("profileNav")
-        .classList.add("active");
-
-
-    document
-        .getElementById("settingsNav")
-        .classList.remove("active");
-
-
-    updateProfile();
 }
 
 
@@ -531,9 +475,6 @@ function showSettings() {
         .classList.remove("active");
 
 
-    document
-        .getElementById("profileNav")
-        .classList.remove("active");
 
 
     document
@@ -547,6 +488,9 @@ function showSettings() {
 // =========================================
 
 function openAllTrades() {
+
+    document.getElementById("portfolioPage").classList.add("hidden");
+
 
     hideSettingsPage();
 
@@ -590,15 +534,7 @@ function openAllTrades() {
 
 function closeAllTrades() {
 
-    document
-        .getElementById("allTradesPage")
-        .classList.add("hidden");
-
-
-    document
-        .getElementById("profilePage")
-        .classList.remove("hidden");
-
+    showPortfolio();
 
     updateProfile();
 }
@@ -1249,6 +1185,8 @@ function renderCalendar() {
         );
     }
 
+
+        renderHomeDashboard();
     } catch (err) {
         console.error(
             "Ошибка renderCalendar:",
@@ -1696,6 +1634,14 @@ function updatePeriodButtons() {
 // =========================================
 
 function getFilteredTrades() {
+    if (selectedPeriod === "custom") {
+        const r = customRange();
+        return trades.filter(trade =>
+            (!r.from || trade.trade_date >= r.from) &&
+            (!r.to || trade.trade_date <= r.to)
+        );
+    }
+
 
     if (
         selectedPeriod ===
@@ -1880,8 +1826,10 @@ function renderAllTrades() {
 
 
     // PERIOD TITLE
-
-    if (
+    updateRangeButton();
+    if (selectedPeriod === "custom") {
+        periodTitle.textContent = rangeTitle();
+    } else if (
         selectedPeriod ===
         "today"
     ) {
@@ -2790,6 +2738,7 @@ function setCurrency(code) {
     renderCalendar();
 
     renderAllTrades();
+    if (typeof portfolioData !== "undefined" && portfolioData) renderPortfolio();
 }
 
 
@@ -3048,7 +2997,6 @@ async function connectTinkoff() {
 
     btn.textContent =
         "Сохраняем...";
-
 
     try {
 
@@ -3579,7 +3527,7 @@ function showPortfolio() {
     ["homePage", "profilePage", "allTradesPage", "tradePage", "tradeDetails", "settingsPage", "analysisPage"]
         .forEach(id => document.getElementById(id).classList.add("hidden"));
     document.getElementById("analysisNav").classList.remove("active");
-    ["homeNav", "profileNav", "settingsNav"]
+    ["homeNav", "settingsNav"]
         .forEach(id => document.getElementById(id).classList.remove("active"));
 
     document.getElementById("portfolioPage").classList.remove("hidden");
@@ -3729,8 +3677,6 @@ function renderPortfolio() {
         dailyEl.className = "";
     }
 
-    renderPortfolioStructure(d);
-    renderPortfolioCash(d);
     renderPortfolioPositions(d);
 
     const t = new Date(d.updatedAt);
@@ -3985,7 +3931,7 @@ function showAnalysis() {
 
     ["homePage", "profilePage", "allTradesPage", "tradePage", "tradeDetails", "settingsPage", "portfolioPage"]
         .forEach(id => document.getElementById(id).classList.add("hidden"));
-    ["homeNav", "profileNav", "settingsNav", "portfolioNav"]
+    ["homeNav", "settingsNav", "portfolioNav"]
         .forEach(id => document.getElementById(id).classList.remove("active"));
 
     document.getElementById("analysisPage").classList.remove("hidden");
@@ -4582,4 +4528,553 @@ function anReset() {
     anSyncSegs();
     // возвращаем значения автоанализа
     anApplyAnalysis();
+}
+
+// =========================================
+// ВЫБОР ПЕРИОДА: календарь в отдельном окне
+// =========================================
+let customFrom = "";
+let customTo = "";
+let rgFrom = "";
+let rgTo = "";
+let rgY = 0;
+let rgM = 0;
+
+function customRange() {
+    let from = customFrom, to = customTo;
+    if (from && to && from > to) { const x = from; from = to; to = x; }
+    return { from, to };
+}
+
+function fmtRu(s) {
+    return s ? s.split("-").reverse().join(".") : "";
+}
+
+function rangeTitle() {
+    const r = customRange();
+    if (r.from && r.to && r.from !== r.to) return "Профит: " + fmtRu(r.from) + " – " + fmtRu(r.to);
+    if (r.from && r.to) return "Профит за " + fmtRu(r.from);
+    if (r.from) return "Профит с " + fmtRu(r.from);
+    if (r.to) return "Профит по " + fmtRu(r.to);
+    return "Профит за всё время";
+}
+
+// даты быстрых кнопок (для календаря): [от, до] или null для «всё время»
+function presetRange() {
+    if (selectedPeriod === "all") return null;
+    const back = { today: 0, week: 6, month: 29 }[selectedPeriod] || 0;
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - back);
+    return [formatDate(d.getFullYear(), d.getMonth() + 1, d.getDate()), getLocalDateString()];
+}
+
+function updateRangeButton() {
+    const btn = document.getElementById("rangeOpenBtn");
+    const label = document.getElementById("rangeBtnLabel");
+    if (!btn || !label) return;
+    const on = selectedPeriod === "custom";
+    btn.classList.toggle("active", on);
+    if (!on) { label.textContent = "Выбрать даты"; return; }
+    const r = customRange();
+    label.textContent = r.from && r.to && r.from !== r.to
+        ? fmtRu(r.from) + " – " + fmtRu(r.to)
+        : fmtRu(r.from || r.to);
+}
+
+function openRangePicker() {
+    let from = "", to = "";
+    if (selectedPeriod === "custom") {
+        const r = customRange(); from = r.from; to = r.to;
+    } else {
+        const p = presetRange();
+        if (p) { from = p[0]; to = p[1]; }
+    }
+    rgFrom = from; rgTo = to;
+    const base = (to || from || getLocalDateString()).split("-");
+    rgY = Number(base[0]); rgM = Number(base[1]) - 1;
+    document.getElementById("rangeModal").classList.remove("hidden");
+    rgRender();
+}
+
+function closeRangePicker() {
+    document.getElementById("rangeModal").classList.add("hidden");
+}
+
+function rgShift(delta) {
+    const d = new Date(rgY, rgM + delta, 1);
+    rgY = d.getFullYear(); rgM = d.getMonth();
+    rgRender();
+}
+
+function rgPick(s) {
+    if (!rgFrom || (rgFrom && rgTo)) {
+        rgFrom = s; rgTo = "";
+    } else if (s < rgFrom) {
+        rgTo = rgFrom; rgFrom = s;
+    } else {
+        rgTo = s;
+    }
+    rgRender();
+}
+
+function rgRender() {
+    const today = getLocalDateString();
+    const first = new Date(rgY, rgM, 1);
+    const offset = (first.getDay() + 6) % 7;
+    const days = new Date(rgY, rgM + 1, 0).getDate();
+    const title = first.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    document.getElementById("rgMonth").textContent = title;
+
+    const nowD = new Date();
+    document.getElementById("rgNext").disabled =
+        rgY > nowD.getFullYear() || (rgY === nowD.getFullYear() && rgM >= nowD.getMonth());
+
+    let html = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+        .map(w => '<div class="rg-wd">' + w + "</div>").join("");
+    for (let i = 0; i < offset; i++) html += "<div></div>";
+
+    const range = rgFrom && rgTo && rgFrom !== rgTo;
+    for (let d = 1; d <= days; d++) {
+        const s = formatDate(rgY, rgM + 1, d);
+        const cls = ["rg-day"];
+        if (s > today) cls.push("dis");
+        if (s === today) cls.push("today");
+        if (s === rgFrom || s === rgTo) cls.push("sel");
+        if (range && s > rgFrom && s < rgTo) cls.push("in");
+        if (range && s === rgFrom) cls.push("rg-s");
+        if (range && s === rgTo) cls.push("rg-e");
+        html += '<button type="button" class="' + cls.join(" ") + '" onclick="rgPick(\'' + s + '\')"><span>' + d + "</span></button>";
+    }
+    document.getElementById("rgGrid").innerHTML = html;
+
+    const f = document.getElementById("rgSumFrom"), t = document.getElementById("rgSumTo");
+    f.innerHTML = "Начало<b>" + (fmtRu(rgFrom) || "—") + "</b>";
+    t.innerHTML = "Конец<b>" + (fmtRu(rgTo || rgFrom) || "—") + "</b>";
+    f.classList.toggle("on", !rgFrom || !!rgTo);
+    t.classList.toggle("on", !!rgFrom && !rgTo);
+    document.getElementById("rgApply").disabled = !rgFrom;
+}
+
+function rgApply() {
+    if (!rgFrom) return;
+    customFrom = rgFrom;
+    customTo = rgTo || rgFrom;
+    selectedPeriod = "custom";
+    closeRangePicker();
+    updatePeriodButtons();
+    renderAllTrades();
+}
+
+function rgReset() {
+    customFrom = ""; customTo = "";
+    closeRangePicker();
+    setTradePeriod("all");
+}
+
+
+// =========================================
+// ГЛАВНАЯ: сводка месяца, график прибыли, цель
+// =========================================
+// Сводка и график показывают месяц, выбранный в календаре.
+
+const MONTH_NAMES_LOWER = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+const MONTH_SHORT = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+
+function renderHomeDashboard() {
+    try { renderMonthSummary(); } catch (e) { console.error("renderMonthSummary:", e); }
+    loadHomeBalance();
+    try { renderBalanceLink(); } catch (e) { console.error("renderBalanceLink:", e); }
+    try { renderProfitChart(); } catch (e) { console.error("renderProfitChart:", e); }
+    try { renderGoal(); } catch (e) { console.error("renderGoal:", e); }
+}
+
+function getMonthTrades() {
+    const prefix = currentCalendarDate.getFullYear() + "-" +
+        String(currentCalendarDate.getMonth() + 1).padStart(2, "0") + "-";
+    return trades.filter(t => typeof t.trade_date === "string" && t.trade_date.startsWith(prefix));
+}
+
+function formatMoney(rub) {
+    const c = convertCurrency(Number(rub) || 0, currentCurrency);
+    return Number(c.toFixed(2)).toLocaleString("ru-RU") + " " + currencyData[currentCurrency].symbol;
+}
+
+function shortDay(dateString) {
+    return parseInt(dateString.slice(8, 10), 10) + " " + MONTH_SHORT[parseInt(dateString.slice(5, 7), 10) - 1];
+}
+
+function renderMonthSummary() {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    const list = getMonthTrades();
+    const pnl = list.reduce((s, t) => s + Number(t.pnl), 0);
+
+    const label = document.getElementById("monthLabel");
+    if (label) {
+        label.textContent = "Прибыль за " + MONTH_NAMES_LOWER[month] +
+            (year !== new Date().getFullYear() ? " " + year : "");
+    }
+    const pnlEl = document.getElementById("monthPnl");
+    if (pnlEl) {
+        pnlEl.textContent = formatPnl(pnl);
+        pnlEl.classList.toggle("pos", pnl > 0);
+        pnlEl.classList.toggle("neg", pnl < 0);
+    }
+}
+
+// График накопленной прибыли по дням со сделками выбранного месяца
+function renderProfitChart() {
+    const box = document.getElementById("profitChart");
+    const axis = document.getElementById("chartAxis");
+    const range = document.getElementById("chartRange");
+    if (!box) return;
+    if (range) {
+        range.textContent = MONTH_SHORT[currentCalendarDate.getMonth()] + " " + currentCalendarDate.getFullYear();
+    }
+
+    const byDay = new Map();
+    getMonthTrades().forEach(t => byDay.set(t.trade_date, (byDay.get(t.trade_date) || 0) + Number(t.pnl)));
+    const days = [...byDay.keys()].sort();
+    let acc = 0;
+    const pts = days.map(d => { acc += byDay.get(d); return { d, v: acc }; });
+    box.classList.toggle("neg", acc < 0);
+    box.classList.remove("scrub");
+    chartPts = [];
+
+    if (pts.length < 2) {
+        box.innerHTML = '<div class="pc-empty">График появится, когда будут сделки минимум за два дня месяца</div>';
+        if (axis) axis.innerHTML = "";
+        return;
+    }
+
+    const W = 320, H = 120, PAD = 10;
+    const vals = pts.map(p => p.v);
+    const min = Math.min(0, ...vals);
+    let max = Math.max(0, ...vals);
+    if (max === min) max = min + 1;
+    const X = i => (i / (pts.length - 1)) * W;
+    const Y = v => PAD + ((max - v) / (max - min)) * (H - PAD * 2);
+
+    const line = pts.map((p, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(p.v).toFixed(1)).join(" ");
+    const area = line + " L" + W + " " + H + " L0 " + H + " Z";
+    const grid = [0.2, 0.5, 0.8].map(f =>
+        '<line class="pc-grid" x1="0" x2="' + W + '" y1="' + (H * f).toFixed(1) + '" y2="' + (H * f).toFixed(1) + '"/>').join("");
+    const zero = min < 0
+        ? '<line class="pc-zero" x1="0" x2="' + W + '" y1="' + Y(0).toFixed(1) + '" y2="' + Y(0).toFixed(1) + '"/>'
+        : "";
+    const last = pts[pts.length - 1];
+
+    box.innerHTML =
+        '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" aria-hidden="true">' +
+        '<defs><linearGradient id="pcFill" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="currentColor" stop-opacity=".28"/>' +
+        '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>' +
+        grid + zero +
+        '<path d="' + area + '" fill="url(#pcFill)"/>' +
+        '<path class="pc-line" d="' + line + '"/></svg>' +
+        '<span class="pc-dot" style="left:100%;top:' + (Y(last.v) / H * 100).toFixed(2) + '%"></span>' +
+        '<i class="pc-guide"></i><span class="pc-mark"></span><div class="pc-tip"></div>';
+
+    chartPts = pts.map((p, i) => ({
+        d: p.d, v: p.v, x: X(i) / W, y: Y(p.v) / H,
+        bal: balanceAt(p.d)
+    }));
+    initChartScrub();
+
+    if (axis) axis.innerHTML = "<span>" + shortDay(pts[0].d) + "</span><span>" + shortDay(last.d) + "</span>";
+}
+
+// Нажатие / перетаскивание по графику показывает баланс (накопленную прибыль) на выбранный день
+let chartPts = [];
+let chartScrubInit = false;
+let chartPressed = false;
+
+function showChartPoint(clientX) {
+    const box = document.getElementById("profitChart");
+    if (!box || !chartPts.length) return;
+    const guide = box.querySelector(".pc-guide");
+    const mark = box.querySelector(".pc-mark");
+    const tip = box.querySelector(".pc-tip");
+    const r = box.getBoundingClientRect();
+    if (!guide || !r.width) return;
+
+    const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    const p = chartPts[Math.round(f * (chartPts.length - 1))];
+
+    guide.style.left = mark.style.left = (p.x * 100) + "%";
+    mark.style.top = (p.y * 100) + "%";
+    tip.innerHTML = "<span>Баланс · " + shortDay(p.d) + "</span><b>" +
+        (p.bal === null ? "Не задан" : formatBalance(p.bal)) + "</b>";
+    box.classList.add("scrub");
+    const w = tip.offsetWidth;
+    tip.style.left = Math.max(w / 2, Math.min(r.width - w / 2, p.x * r.width)) + "px";
+}
+
+function hideChartPoint() {
+    const box = document.getElementById("profitChart");
+    if (box) box.classList.remove("scrub");
+}
+
+function initChartScrub() {
+    const box = document.getElementById("profitChart");
+    if (!box || chartScrubInit) return;
+    chartScrubInit = true;
+    box.addEventListener("pointerdown", e => { chartPressed = true; showChartPoint(e.clientX); });
+    box.addEventListener("pointermove", e => {
+        if (chartPressed || e.pointerType === "mouse") showChartPoint(e.clientX);
+    });
+    box.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") hideChartPoint(); });
+    window.addEventListener("pointerup", () => { chartPressed = false; });
+    window.addEventListener("pointercancel", () => { chartPressed = false; });
+    document.addEventListener("pointerdown", e => {
+        if (!e.target.closest("#profitChart")) hideChartPoint();
+    });
+}
+
+// ---------- Баланс от портфеля T-Invest ----------
+// Текущая стоимость портфеля — опорная точка. Баланс на день D = стоимость портфеля сейчас
+// минус результат сделок, закрытых после D. Если портфель недоступен (нет токена, ошибка сети),
+// используется стартовый баланс, заданный вручную.
+
+let homePortfolio = null;
+let homeBalanceBusy = false;
+let homeBalanceTriedAt = 0;
+
+function portfolioTotalRub() {
+    const cands = [];
+    if (portfolioData && portfolioData.totals) {
+        cands.push({ t: portfolioLoadedAt, v: Number(portfolioData.totals.portfolio) });
+    }
+    if (homePortfolio) cands.push({ t: homePortfolio.at, v: homePortfolio.rub });
+    const fresh = cands.filter(c => isFinite(c.v)).sort((x, y) => y.t - x.t)[0];
+    return fresh ? fresh.v : null;
+}
+
+function balanceAt(day) {
+    const sum = pred => trades.filter(pred).reduce((s, t) => s + Number(t.pnl), 0);
+    const pf = portfolioTotalRub();
+    if (pf !== null) return pf - sum(t => t.trade_date > day);
+    const start = loadStartBalance();
+    return start === null ? null : start + sum(t => t.trade_date <= day);
+}
+
+async function loadHomeBalance() {
+    if (homeBalanceBusy) return;
+    const now = Date.now();
+    if (now - homeBalanceTriedAt < 60 * 1000) return; // не чаще раза в минуту
+    homeBalanceTriedAt = now;
+    homeBalanceBusy = true;
+    try {
+        const { data: { session } } = await db.auth.getSession();
+        if (!session) return;
+        const res = await fetch(functionsUrl("get-tinkoff-portfolio"), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + session.access_token
+            },
+            body: JSON.stringify({})
+        });
+        if (!res.ok) return; // нет токена или временная ошибка: работает ручной стартовый баланс
+        const result = await res.json();
+        const rub = result && result.totals ? Number(result.totals.portfolio) : NaN;
+        if (!isFinite(rub)) return;
+        homePortfolio = { rub: rub, at: Date.now() };
+        renderBalanceLink();
+        renderProfitChart();
+    } catch (e) {
+        console.log("loadHomeBalance (проигнорировано):", e);
+    } finally {
+        homeBalanceBusy = false;
+    }
+}
+
+// ---------- Стартовый баланс (для расчёта общего баланса на графике) ----------
+// Баланс на счёте до первой сделки журнала; хранится в localStorage на этом устройстве.
+
+function formatBalance(rub) {
+    const c = convertCurrency(Number(rub) || 0, currentCurrency);
+    return Math.round(c).toLocaleString("ru-RU") + " " + currencyData[currentCurrency].symbol;
+}
+
+function loadStartBalance() {
+    if (!goalUid) return null;
+    try {
+        const raw = localStorage.getItem("startBalance:" + goalUid);
+        if (raw === null) return null;
+        const n = Number(raw);
+        return isFinite(n) ? n : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function storeStartBalance(n) {
+    if (!goalUid) return;
+    try {
+        if (n === null) localStorage.removeItem("startBalance:" + goalUid);
+        else localStorage.setItem("startBalance:" + goalUid, String(n));
+    } catch (e) { /* хранилище недоступно */ }
+}
+
+function renderBalanceLink() {
+    const btn = document.getElementById("balanceBtn");
+    if (!btn) return;
+    if (!goalUid) {
+        ensureGoalUid().then(uid => { if (uid) { renderBalanceLink(); renderProfitChart(); } });
+    }
+    const linked = portfolioTotalRub() !== null;
+    btn.disabled = linked;
+    btn.classList.toggle("linked", linked);
+    if (linked) {
+        btn.textContent = "Баланс привязан к портфелю T-Invest";
+        return;
+    }
+    const s = loadStartBalance();
+    btn.textContent = s === null
+        ? "Указать стартовый баланс"
+        : "Стартовый баланс: " + formatBalance(s) + " · изменить";
+}
+
+function openBalanceModal() {
+    ensureGoalUid().then(() => {
+        const s = loadStartBalance();
+        document.getElementById("balanceInput").value = s === null ? "" : s;
+        document.getElementById("balanceError").classList.add("hidden");
+        document.getElementById("balanceDeleteBtn").classList.toggle("hidden", s === null);
+        document.getElementById("balanceModal").classList.remove("hidden");
+    });
+}
+
+function closeBalanceModal() {
+    document.getElementById("balanceModal").classList.add("hidden");
+}
+
+function saveBalance() {
+    const n = Number(document.getElementById("balanceInput").value);
+    const raw = document.getElementById("balanceInput").value.trim();
+    const error = document.getElementById("balanceError");
+    if (!raw || !isFinite(n) || n < 0) {
+        error.textContent = "Введите сумму от нуля";
+        error.classList.remove("hidden");
+        return;
+    }
+    storeStartBalance(n);
+    closeBalanceModal();
+    renderBalanceLink();
+    renderProfitChart();
+}
+
+function deleteBalance() {
+    storeStartBalance(null);
+    closeBalanceModal();
+    renderBalanceLink();
+    renderProfitChart();
+}
+
+// ---------- Цель ----------
+// Хранится в localStorage на этом устройстве. Прогресс — прибыль со дня создания цели.
+
+let goalUid = null;
+
+function ensureGoalUid() {
+    if (goalUid) return Promise.resolve(goalUid);
+    return db.auth.getSession()
+        .then(({ data }) => {
+            goalUid = data && data.session ? data.session.user.id : null;
+            return goalUid;
+        })
+        .catch(() => null);
+}
+
+function loadGoal() {
+    if (!goalUid) return null;
+    try {
+        const g = JSON.parse(localStorage.getItem("goal:" + goalUid) || "null");
+        return g && g.amount > 0 ? g : null;
+    } catch (e) {
+        return null;
+    }
+}
+function storeGoal(goal) {
+    if (!goalUid) return;
+    try {
+        if (goal) localStorage.setItem("goal:" + goalUid, JSON.stringify(goal));
+        else localStorage.removeItem("goal:" + goalUid);
+    } catch (e) { /* хранилище недоступно */ }
+}
+
+function renderGoal() {
+    const card = document.getElementById("goalCard");
+    if (!card) return;
+    if (!goalUid) {
+        ensureGoalUid().then(uid => { if (uid) renderGoal(); });
+    }
+    const goal = loadGoal();
+    const name = document.getElementById("goalName");
+    const pct = document.getElementById("goalPct");
+    const fill = document.getElementById("goalFill");
+    const sub = document.getElementById("goalSub");
+
+    card.classList.toggle("empty", !goal);
+    if (!goal) {
+        name.textContent = "Поставить цель";
+        pct.textContent = "+";
+        fill.style.width = "0%";
+        sub.textContent = "Нажмите, чтобы указать, что хотите и сколько нужно заработать";
+        return;
+    }
+
+    const earned = trades
+        .filter(t => typeof t.trade_date === "string" && t.trade_date >= goal.start)
+        .reduce((s, t) => s + Number(t.pnl), 0);
+    const ratio = Math.max(0, Math.min(1, earned / goal.amount));
+
+    name.textContent = goal.title || "Цель";
+    pct.textContent = Math.round(ratio * 100) + "%";
+    fill.style.width = (ratio * 100).toFixed(1) + "%";
+    sub.textContent = earned >= goal.amount
+        ? "Цель достигнута · " + formatMoney(earned) + " из " + formatMoney(goal.amount)
+        : formatMoney(Math.max(0, earned)) + " из " + formatMoney(goal.amount) + " · с " + shortDay(goal.start);
+}
+
+function openGoalModal() {
+    ensureGoalUid().then(() => {
+        const goal = loadGoal();
+        document.getElementById("goalTitleInput").value = goal ? goal.title : "";
+        document.getElementById("goalAmountInput").value = goal ? goal.amount : "";
+        document.getElementById("goalError").classList.add("hidden");
+        document.getElementById("goalDeleteBtn").classList.toggle("hidden", !goal);
+        document.getElementById("goalModal").classList.remove("hidden");
+    });
+}
+
+function closeGoalModal() {
+    document.getElementById("goalModal").classList.add("hidden");
+}
+
+function saveGoal() {
+    const title = document.getElementById("goalTitleInput").value.trim();
+    const amount = Number(document.getElementById("goalAmountInput").value);
+    const error = document.getElementById("goalError");
+    if (!isFinite(amount) || amount <= 0) {
+        error.textContent = "Введите сумму больше нуля";
+        error.classList.remove("hidden");
+        return;
+    }
+    const old = loadGoal();
+    storeGoal({
+        title: title,
+        amount: amount,
+        start: old ? old.start : getLocalDateString()
+    });
+    closeGoalModal();
+    renderGoal();
+}
+
+function deleteGoal() {
+    storeGoal(null);
+    closeGoalModal();
+    renderGoal();
 }

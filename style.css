@@ -564,3 +564,337 @@ html.light-theme{--glass:color-mix(in srgb,var(--surface) 62%,transparent);--gla
 
 /* нижняя капсула: более прозрачная, видно фон сквозь неё */
 .bottom-nav{background:color-mix(in srgb,var(--surface) 66%,transparent);box-shadow:var(--glass-edge),0 16px 36px -20px rgba(0,0,0,.55)}
+/* ================= HUMBLE · CALM: тихая палитра, мягкие формы, живой фон ================= */
+:root{
+ --bg:#0f1514;--surface:#161e1d;--surface-2:#1e2827;--surface-3:#273331;
+ --text:#e8eeeb;--muted:#8a9893;--line:rgba(232,238,235,.06);--line-hi:rgba(232,238,235,.11);
+ --accent:#a8b7ee;--accent-2:#8fa3e8;--on-accent:#141a33;--profit:#82d4b2;--loss:#eb9490;--on-solid:#0d1512;--warn:#e9c176;
+ --display:"Fraunces","Onest",Georgia,serif;--r:22px;--sy:0;
+ --glow-1:rgba(168,183,238,.16);--glow-2:rgba(130,212,178,.10);--art:.16;--grain:.04}
+html.light-theme{
+ --bg:#eef1ef;--surface:#fbfcfb;--surface-2:#e5eae7;--surface-3:#d9e0dc;
+ --text:#18211e;--muted:#6a7873;--line:rgba(24,33,30,.07);--line-hi:rgba(24,33,30,.13);
+ --accent:#5c6fd3;--accent-2:#7385e0;--on-accent:#fff;--profit:#2bb98a;--loss:#e06a73;--warn:#b7791f;
+ --glow-1:rgba(92,111,211,.13);--glow-2:rgba(43,185,138,.14);--art:.18}
+body{letter-spacing:.005em}
+h1,h2,.wordmark,.hero strong,.period-profit>strong,.result strong,.card strong,.an-tile b,.an-h,.modal-title,.rules-title,#detailsSymbol,.pf-pos-id strong,.all-trades-button strong,#profilePage .detail-row strong,#anVerdict,.an-ring-num b{font-family:var(--display);font-weight:450;letter-spacing:-.02em}
+h1{font-size:34px;line-height:1.1}
+.hero strong,.period-profit>strong,.result strong{font-weight:400;letter-spacing:-.03em}
+
+/* дышащий фон: два медленных пятна, смещаются при прокрутке */
+.aura{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden}
+.aura i{position:absolute;width:70vmax;height:70vmax;border-radius:50%;filter:blur(70px);opacity:.9;will-change:transform;animation:drift 26s ease-in-out infinite alternate}
+.aura i:first-child{left:-25vmax;top:-30vmax;background:radial-gradient(closest-side,var(--glow-1),transparent)}
+.aura i:last-child{right:-30vmax;bottom:-30vmax;background:radial-gradient(closest-side,var(--glow-2),transparent);animation-duration:32s;animation-delay:-9s}
+@keyframes drift{to{transform:translate3d(8vmax,calc(5vmax + var(--sy)*1px),0) scale(1.12)}}
+body::before{display:none}
+body::after{opacity:var(--grain)}
+.bg-art{animation:breathe 14s ease-in-out infinite alternate}
+@keyframes breathe{to{transform:translateY(-10px);opacity:calc(var(--art)*.7)}}
+
+/* поверхности: единый радиус, почти без теней */
+:is(.card,.settings-card,.account-section,.rules-section,.calendar-section,.an-sub,.an-plan,.an-score,.pf-card,.pf-position,.details-comment,#authPage .form,#tradeDetails .details-card){border-radius:var(--r);box-shadow:inset 0 0 0 1px var(--line);background:color-mix(in srgb,var(--surface) 82%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+input,textarea,select{border-radius:16px;background:color-mix(in srgb,var(--surface) 85%,transparent);box-shadow:inset 0 0 0 1px var(--line)}
+input:focus,textarea:focus,select:focus{box-shadow:inset 0 0 0 1.5px var(--accent),0 0 0 5px color-mix(in srgb,var(--accent) 14%,transparent)}
+
+/* главная: приветствие и сводка */
+.greet{padding:4px 0 2px}.greet p{font-family:var(--display);font-size:26px;letter-spacing:-.02em}.greet span{font-size:13px;color:var(--muted)}
+.hero{position:relative;margin:14px 0 18px;padding:24px 22px 22px;border-radius:28px;overflow:hidden;
+ background:linear-gradient(150deg,color-mix(in srgb,var(--accent) 17%,var(--surface)),color-mix(in srgb,var(--profit) 9%,var(--surface)));box-shadow:inset 0 0 0 1px var(--line-hi)}
+.hero::after{content:"";position:absolute;right:-40px;top:-50px;width:170px;height:170px;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 28%,transparent),transparent);animation:breathe 9s ease-in-out infinite alternate}
+.hero-sub{background:color-mix(in srgb,var(--bg) 40%,transparent)}
+.hero strong.pos,.pf-up{color:var(--profit)}.hero strong.neg,.pf-down{color:var(--loss)}
+
+/* календарь: спокойные дни, цвет только оттенком */
+.calendar-day{border-radius:16px;transition:background .25s,transform .25s var(--spring);animation:pop .5s var(--ease) both;animation-delay:calc(var(--i,0)*9ms)}
+@keyframes pop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:none}}
+.calendar-day:not(.empty-day):hover{transform:translateY(-2px)}
+.calendar-day.profit{background:color-mix(in srgb,var(--profit) 30%,transparent)}.calendar-day.loss{background:color-mix(in srgb,var(--loss) 28%,transparent)}
+.calendar-day.profit :is(.calendar-number,.calendar-pnl){color:var(--profit)}.calendar-day.loss :is(.calendar-number,.calendar-pnl){color:var(--loss)}
+.calendar-day.today{box-shadow:inset 0 0 0 1.5px var(--accent)}
+
+/* кнопки: матовые, без блеска */
+:is(.add-button,.save-button),.an-go,.an-pill{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);box-shadow:0 12px 28px -16px var(--accent)}
+.an-go,.an-pill{color:var(--on-accent)}
+.an-pill::after,.fab-ring{animation-duration:8s}.wordmark{animation:none;background:none;-webkit-text-fill-color:var(--text)}
+.save-button.busy::after{content:"";width:16px;height:16px;margin-left:10px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:pfspin .8s linear infinite}
+.btn-ripple{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.18;transform:scale(0);animation:rip .6s ease-out forwards}
+@keyframes rip{to{transform:scale(1);opacity:0}}
+:is(.save-button,.add-button,.edit-button,.an-go,.update-rates-button,.period-button,.direction-button){position:relative;overflow:hidden}
+
+/* шапка уплотняется при прокрутке */
+.topbar{transition:height .3s var(--ease)}body.scrolled .topbar{height:56px}
+.wordmark{transition:font-size .3s var(--ease)}body.scrolled .wordmark{font-size:17px}
+
+/* настройки: группы */
+.group-title{margin:22px 4px 8px;font-size:13px;font-weight:500;color:var(--muted)}
+#settingsPage>.group-title:first-of-type{margin-top:4px}
+
+/* график анализа: без вращающейся рамки */
+.an-chart::before{display:none}.an-chart{padding:0;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line-hi)}
+.an-chart iframe{border-radius:var(--r)}
+
+/* навигация: плавающая «галька» */
+.bottom-nav{border-radius:30px;background:color-mix(in srgb,var(--surface) 72%,transparent);box-shadow:inset 0 0 0 1px var(--line-hi),0 18px 40px -24px rgba(0,0,0,.6)}
+.nav-ind{background:color-mix(in srgb,var(--accent) 15%,transparent);box-shadow:none}
+.fab{box-shadow:0 0 0 6px var(--bg),0 12px 26px -10px var(--accent)}
+
+/* появление страниц мягче и короче */
+.app>div[data-dir]:not(.hidden):not(.bottom-nav):not(.modal){animation-duration:.5s}
+@media (prefers-reduced-motion:reduce){.aura i,.bg-art,.hero::after,.calendar-day{animation:none!important}}
+
+/* ===== Calm · продолжение: форма, быстрые показатели, пустые состояния ===== */
+.chips{display:flex;gap:8px;margin:0 0 16px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips span{flex:none;padding:9px 14px;border-radius:999px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--surface) 80%,transparent);box-shadow:inset 0 0 0 1px var(--line);animation:rise .5s var(--ease) both}
+.chips span:nth-child(2){animation-delay:60ms}.chips span:nth-child(3){animation-delay:120ms}
+.chips b{margin-left:6px;color:var(--text);font-weight:600}
+.more-fields{border-radius:var(--r);box-shadow:inset 0 0 0 1px var(--line);background:color-mix(in srgb,var(--surface) 70%,transparent)}
+.more-fields>summary{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;cursor:pointer;list-style:none;font-size:14px;color:var(--muted)}
+.more-fields>summary::-webkit-details-marker{display:none}
+.more-fields>summary::after{content:"+";font-size:20px;line-height:1;transition:transform .3s var(--spring)}
+.more-fields[open]>summary::after{transform:rotate(45deg)}
+.more-body{display:grid;gap:12px;padding:0 14px 16px;animation:rise .4s var(--ease)}
+.more-body label{margin:4px 0 -4px}
+.empty,.pf-empty,.an-empty{position:relative;padding:44px 0 28px}
+.empty::before{content:"";display:block;width:52px;height:52px;margin:0 auto 14px;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 30%,transparent),transparent);animation:breathe 4s ease-in-out infinite alternate}
+.card{transition:transform .3s var(--spring),background .2s}.card:hover{transform:translateY(-2px)}
+.field-ok{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--profit) 55%,transparent)!important}
+/* ===== Портфель: валюта в шапке, курс внизу ===== */
+.pf-hero-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cur-seg{display:inline-flex;padding:3px;border-radius:999px;background:color-mix(in srgb,var(--bg) 40%,transparent);box-shadow:var(--glass-edge,none)}
+.cur-seg button{min-width:38px;height:30px;padding:0 10px;border:0;border-radius:999px;background:transparent;color:var(--muted);font:600 14px/1 inherit;font-family:inherit;cursor:pointer;transition:background .2s,color .2s}
+.cur-seg button.active{background:var(--accent);color:var(--on-accent)}
+#portfolioPage .pf-rates{margin-top:22px}
+#portfolioPage .pf-rates .exchange-rates{margin-top:0}
+
+/* переключатель валюты должен быть над декоративным свечением шапки */
+.hero::after{pointer-events:none}
+.pf-hero-top{position:relative;z-index:2}
+.cur-seg button{position:relative;z-index:2;touch-action:manipulation}
+
+
+
+/* ===== Аналитика: окно выбора периода ===== */
+.range-open{display:flex;align-items:center;gap:10px;width:100%;height:50px;padding:0 16px;border-radius:16px;background:var(--surface);color:var(--muted);font-weight:600;font-size:14px;margin-bottom:26px;text-align:left}
+.range-open .ico{width:18px;height:18px;flex:none}
+.range-open-label{flex:1}
+.range-open-chev{font-size:20px;line-height:1;opacity:.6}
+.range-open.active{background:var(--text);color:var(--bg)}
+.rg-sum{display:flex;gap:8px;margin:4px 0 14px}
+.rg-sum div{flex:1;padding:10px 14px;border-radius:14px;background:var(--surface-2);font-size:12px;color:var(--muted)}
+.rg-sum b{display:block;margin-top:2px;font-size:15px;color:var(--text)}
+.rg-sum div.on{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.rg-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.rg-nav button{width:38px;height:38px;border-radius:50%;background:var(--surface-2);color:var(--text);font-size:20px;line-height:1}
+.rg-nav button:disabled{opacity:.3}
+.rg-month{font-family:var(--display);font-size:17px;letter-spacing:-.02em;text-transform:capitalize}
+.rg-grid{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+.rg-wd{text-align:center;font-size:11px;color:var(--muted);padding:6px 0}
+.rg-day{height:42px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--text);background:transparent}
+.rg-day span{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.rg-day.dis{opacity:.3;pointer-events:none}
+.rg-day.today span{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.rg-day.in{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.rg-day.rg-s{background:linear-gradient(90deg,transparent 50%,color-mix(in srgb,var(--accent) 18%,transparent) 50%)}
+.rg-day.rg-e{background:linear-gradient(270deg,transparent 50%,color-mix(in srgb,var(--accent) 18%,transparent) 50%)}
+.rg-day.sel span{background:var(--accent);color:var(--on-accent);box-shadow:none}
+.modal-button.rg-apply{background:var(--accent);color:var(--on-accent)}
+.modal-button.rg-apply:disabled{opacity:.4}
+
+/* ================= ТЕМА «TradeLens»: тёмно-синий фон, зелёный акцент, Space Grotesk + JetBrains Mono ================= */
+:root{
+ --bg:#070b16;--surface:#0d1526;--surface-2:#131e36;--surface-3:#1a2845;
+ --text:#e6ecf8;--muted:#6f7d99;--line:rgba(124,150,210,.11);--line-hi:rgba(124,150,210,.2);
+ --accent:#34d399;--accent-2:#2bb581;--on-accent:#04251a;--profit:#34d399;--loss:#f0586a;--warn:#f5c443;--on-solid:#04251a;
+ --glow-1:transparent;--glow-2:transparent;--art:0;--grain:0;--r:20px;
+ --display:"Space Grotesk","Onest",system-ui,sans-serif;
+ --sans:"Space Grotesk","Onest",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+ --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+ --glass:var(--surface-2);--glass-edge:inset 0 0 0 1px var(--line)}
+html.light-theme{
+ --bg:#eef2f9;--surface:#fff;--surface-2:#e8edf6;--surface-3:#dbe3f0;
+ --text:#0b1326;--muted:#64708a;--line:rgba(11,19,38,.08);--line-hi:rgba(11,19,38,.15);
+ --accent:#10a36f;--accent-2:#0d8f61;--on-accent:#fff;--profit:#10a36f;--loss:#e0455a;--warn:#c78a06;
+ --glass:var(--surface-2);--glass-edge:inset 0 0 0 1px var(--line)}
+
+/* плоский фон без свечения, сетки и зерна */
+.aura,.bg-art,body::after{display:none!important}
+.topbar{-webkit-backdrop-filter:none;backdrop-filter:none;-webkit-mask-image:none;mask-image:none;background:var(--bg)}
+
+/* карточки */
+:is(.card,.settings-card,.account-section,.rules-section,.calendar-section,.an-sub,.an-plan,.an-score,.pf-card,.pf-position,.details-comment,#authPage .form,#tradeDetails .details-card){
+ border-radius:var(--r);background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--surface) 80%,var(--bg)));
+ box-shadow:inset 0 0 0 1px var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
+.card:hover{transform:none}
+input,textarea,select{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line)}
+.chips span,.more-fields{background:var(--surface)}
+
+/* шрифты: заголовки — Space Grotesk, цифры — JetBrains Mono */
+h1,h2,.wordmark,.modal-title,.rules-title,.an-h,#anVerdict,#detailsSymbol,.all-trades-button strong,.pf-pos-id strong,.greet p{
+ font-family:var(--display);font-weight:600;letter-spacing:-.01em}
+h1{font-size:30px}
+.wordmark{font-weight:700;letter-spacing:-.02em}
+.hero strong,.period-profit>strong,.result strong,.card strong,.an-tile b,.an-ring-num b,.period-meta b,.hero-sub b,.chips b,
+.calendar-pnl,.pf-sum,.pf-pct,.pf-cash-row b,.pf-pos-pnl b,.pf-pos-pnl span,.pf-stats b,.detail-row strong,#detailsPnl,.rg-sum b{
+ font-family:var(--mono);font-weight:600;letter-spacing:-.02em}
+.hero strong,.period-profit>strong{font-size:clamp(30px,9.4vw,42px);line-height:1.15}
+
+/* подписи: мелкие капсом, как у TradeLens */
+.hero-label,.period-profit>span,.pnl-label,.group-title{text-transform:uppercase;letter-spacing:.09em;font-size:11.5px;font-weight:500;color:var(--muted)}
+#periodWinRate,#chipWr,#profileWinRate{color:var(--warn)}
+
+/* шапка-итог */
+.hero{border-radius:var(--r);background:linear-gradient(180deg,var(--surface-2),var(--surface));box-shadow:inset 0 0 0 1px var(--line-hi)}
+.hero::after{display:none}
+.hero-sub,.cur-seg{background:var(--surface-3)}
+
+/* периоды: вкладки с зелёным подчёркиванием */
+.period-selector{gap:0;border-bottom:1px solid var(--line)}
+.period-selector .period-button{height:44px;border-radius:0!important;background:none!important;box-shadow:none!important;color:var(--muted);font-weight:500;font-size:13px}
+.period-selector .period-button.active{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)!important}
+
+/* кнопки */
+:is(.add-button,.save-button),.an-go,.an-pill{background:var(--accent);color:var(--on-accent);box-shadow:none}
+.an-pill::after{display:none}
+.fab{background:var(--accent);color:var(--on-accent);box-shadow:0 0 0 6px var(--bg)}
+.bottom-nav{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1px var(--line-hi),0 12px 28px -14px rgba(0,0,0,.7)}
+.nav-ind{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+
+/* кнопки в настройках: читаемые вторичные и активные/неактивные основные */
+.app :is(.edit-button,.update-rates-button,.all-trades-button){background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--line-hi)}
+.app .account-link-form .update-rates-button{background:var(--accent);color:var(--on-accent);box-shadow:none;font-weight:600}
+.app .account-link-form .update-rates-button:disabled{background:var(--surface-3);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line-hi);opacity:1;cursor:default}
+
+
+/* ===== Главная: сводка месяца, график прибыли, цель ===== */
+
+.home-card{display:block;margin:14px 0 0;padding:18px 18px 16px;border-radius:var(--r,22px);
+ background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--surface) 80%,var(--bg)));box-shadow:inset 0 0 0 1px var(--line)}
+#chartCard{margin-top:0}
+#monthPnl{margin-bottom:0}
+#homePage .calendar-section{margin-top:14px}
+.home-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:16px}
+.home-card-head h2{font-size:17px}
+.home-card-head span{font-size:13px;color:var(--muted)}
+
+.profit-chart{position:relative;height:130px;color:var(--profit)}
+.profit-chart.neg{color:var(--loss)}
+.profit-chart svg{display:block;width:100%;height:100%;overflow:visible}
+.pc-grid{stroke:var(--line-hi,var(--line));stroke-width:1;stroke-dasharray:3 5;vector-effect:non-scaling-stroke}
+.pc-zero{stroke:var(--muted);stroke-width:1;stroke-dasharray:2 4;opacity:.6;vector-effect:non-scaling-stroke}
+.pc-line{fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.pc-dot{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:currentColor;box-shadow:0 0 0 4px color-mix(in srgb,currentColor 22%,transparent)}
+.pc-empty{height:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 12px;font-size:13px;color:var(--muted)}
+.chart-axis{display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--muted)}
+
+.goal-card{width:100%;text-align:left;color:inherit}
+.goal-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.goal-name{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.goal-pct{flex:none;font-family:var(--mono,var(--display));font-size:15px;color:var(--muted)}
+.goal-bar{height:8px;margin:14px 0 10px;border-radius:99px;overflow:hidden;background:var(--surface-3,var(--surface-2))}
+.goal-bar i{display:block;width:0;height:100%;border-radius:inherit;background:var(--profit);transition:width .6s var(--ease,ease-out)}
+.goal-sub{font-size:13px;color:var(--muted)}
+.goal-card.empty .goal-name{color:var(--muted)}
+.goal-card.empty .goal-pct{font-size:22px;line-height:1}
+
+.modal-form{display:grid;gap:14px;margin-top:6px}
+.modal-form .field label{margin-bottom:8px}
+.modal-form input{width:100%}
+.goal-error{font-size:13px;color:var(--loss)}
+
+.profit-chart{touch-action:pan-y;-webkit-user-select:none;user-select:none;cursor:crosshair}
+.pc-guide,.pc-mark,.pc-tip{opacity:0;pointer-events:none;transition:opacity .12s}
+.pc-guide{position:absolute;top:0;bottom:0;width:1px;margin-left:-.5px;background:currentColor;opacity:0}
+.pc-mark{position:absolute;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;background:var(--bg);border:2px solid currentColor}
+.pc-tip{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;gap:2px;white-space:nowrap;padding:6px 10px;border-radius:12px;color:var(--text);
+ background:var(--surface-3,var(--surface-2));box-shadow:inset 0 0 0 1px var(--line-hi,var(--line)),0 8px 20px -10px rgba(0,0,0,.55)}
+.pc-tip span{font-size:11px;color:var(--muted)}
+.pc-tip b{font-family:var(--mono,var(--display));font-size:14px;font-weight:600}
+.profit-chart.scrub .pc-mark,.profit-chart.scrub .pc-tip{opacity:1}
+.profit-chart.scrub .pc-guide{opacity:.35}
+
+.balance-link{display:block;margin-top:12px;font-size:13px;color:var(--accent);text-align:left}
+.balance-hint{font-size:13px;color:var(--muted);line-height:1.4}
+.balance-link.linked{color:var(--muted);cursor:default}
+/* ================= Живые зелёные и красные кнопки: перелив + блик ================= */
+:root{
+ --g-a:#17c58b;--g-b:#34d399;--g-c:#8bf2c9;--g-glow:rgba(52,211,153,.5);
+ --r-a:#dc334e;--r-b:#f0586a;--r-c:#ff8f7d;--r-glow:rgba(240,88,106,.45);
+ --sheen:rgba(255,255,255,.42);
+}
+html.light-theme{
+ --g-a:#0b8559;--g-b:#10a36f;--g-c:#1fbf88;--g-glow:rgba(16,163,111,.4);
+ --r-a:#c92b45;--r-b:#e0455a;--r-c:#ee6a5b;--r-glow:rgba(224,69,90,.36);
+ --sheen:rgba(255,255,255,.5);
+}
+
+/* один цикл: цвет перетекает туда-обратно, раз в несколько секунд пробегает блик */
+@keyframes live-flow{
+ 0%  {background-position:-80% 0,0% 0}
+ 35% {background-position:180% 0,60% 0}
+ 50% {background-position:180% 0,100% 0}
+ 51% {background-position:-80% 0,100% 0}
+ 100%{background-position:-80% 0,0% 0}
+}
+@keyframes live-glow-g{0%,100%{box-shadow:0 10px 24px -12px var(--g-glow),inset 0 1px 0 rgba(255,255,255,.3)}50%{box-shadow:0 14px 30px -10px var(--g-glow),inset 0 1px 0 rgba(255,255,255,.3)}}
+@keyframes live-glow-r{0%,100%{box-shadow:0 10px 24px -12px var(--r-glow),inset 0 1px 0 rgba(255,255,255,.25)}50%{box-shadow:0 14px 30px -10px var(--r-glow),inset 0 1px 0 rgba(255,255,255,.25)}}
+
+/* ---------- ЗЕЛЁНЫЕ ---------- */
+:is(.add-button,.save-button):not(.day-trades .add-button):not(.broker-actions .save-button),
+.an-go,.fab,#longButton.active,.an-seg button.active[data-v="long"],
+.modal-button.rg-apply:not(:disabled),
+.app .account-link-form .update-rates-button:not(:disabled){
+ background-image:
+  linear-gradient(105deg,transparent 0,var(--sheen) 50%,transparent 100%),
+  linear-gradient(115deg,var(--g-a),var(--g-b) 35%,var(--g-c) 62%,var(--g-b) 82%,var(--g-a));
+ background-size:38% 100%,260% 100%;
+ background-repeat:no-repeat;
+ background-color:var(--g-b);
+ color:var(--on-accent);
+ animation:live-flow 7s linear infinite,live-glow-g 3.6s ease-in-out infinite;
+ box-shadow:0 10px 24px -12px var(--g-glow),inset 0 1px 0 rgba(255,255,255,.3);
+}
+.fab{box-shadow:0 0 0 6px var(--bg),0 12px 26px -10px var(--g-glow);animation:live-flow 7s linear infinite}
+#longButton.active,.an-seg button.active[data-v="long"]{animation:live-flow 7s linear infinite;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.an-seg button.active[data-v="long"]{color:var(--on-accent)}
+
+/* ---------- КРАСНЫЕ (залитые) ---------- */
+.modal-button.confirm,#shortButton.active,.an-seg button.active[data-v="short"]{
+ background-image:
+  linear-gradient(105deg,transparent 0,var(--sheen) 50%,transparent 100%),
+  linear-gradient(115deg,var(--r-a),var(--r-b) 35%,var(--r-c) 62%,var(--r-b) 82%,var(--r-a));
+ background-size:38% 100%,260% 100%;
+ background-repeat:no-repeat;
+ background-color:var(--r-b);
+ color:#fff;
+ animation:live-flow 7s linear infinite -3s;
+ box-shadow:0 10px 24px -12px var(--r-glow),inset 0 1px 0 rgba(255,255,255,.25);
+}
+.modal-button.confirm{animation:live-flow 7s linear infinite -3s,live-glow-r 3.6s ease-in-out infinite}
+#shortButton.active,.an-seg button.active[data-v="short"]{box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+
+/* ---------- КРАСНЫЕ (мягкие: «Удалить», «Выйти») ---------- */
+.delete-button,.logout-button,.broker-actions .delete-button{
+ background-image:
+  linear-gradient(105deg,transparent 0,color-mix(in srgb,var(--r-c) 38%,transparent) 50%,transparent 100%),
+  linear-gradient(115deg,
+   color-mix(in srgb,var(--r-a) 14%,var(--surface)),
+   color-mix(in srgb,var(--r-b) 30%,var(--surface)) 40%,
+   color-mix(in srgb,var(--r-c) 22%,var(--surface)) 65%,
+   color-mix(in srgb,var(--r-a) 14%,var(--surface)));
+ background-size:38% 100%,260% 100%;
+ background-repeat:no-repeat;
+ background-color:color-mix(in srgb,var(--r-b) 18%,var(--surface));
+ color:var(--loss);
+ box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--r-b) 38%,transparent);
+ animation:live-flow 8s linear infinite -2s;
+}
+:is(.delete-button,.logout-button):active{transform:scale(.98)}
+
+/* нажатая / недоступная кнопка не мерцает */
+:is(.add-button,.save-button,.an-go,.modal-button,.delete-button,.logout-button):disabled{animation:none;filter:saturate(.55)}
+
+@media (prefers-reduced-motion:reduce){
+ :is(.add-button,.save-button,.an-go,.fab,.modal-button,.delete-button,.logout-button,#longButton,#shortButton,.an-seg button,.update-rates-button){animation:none!important}
+}

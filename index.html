@@ -4,16 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Humble</title>
-    <meta name="theme-color" content="#0b100e">
+    <meta name="theme-color" content="#070b16">
     <script>try{if(localStorage.getItem("appTheme")==="light")document.documentElement.classList.add("light-theme")}catch(e){}</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..700&family=Unbounded:wght@400..600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=JetBrains+Mono:wght@400..700&family=Onest:wght@400..700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
+<div class="aura" aria-hidden="true"><i></i><i></i></div>
 <div class="bg-art" aria-hidden="true">
     <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMax slice" focusable="false">
         <polyline class="trend" points="14.0,166.9 38.5,159.4 63.0,139.5 87.5,146.4 112.0,122.4 136.5,96.2 161.0,97.0 185.5,69.7 210.0,50.0 234.5,42.5 259.0,37.3 283.5,38.4 308.0,54.3 332.5,57.5 357.0,42.2 381.5,31.8"/>
@@ -23,7 +24,7 @@
 
 <div class="app">
 
-    <header class="topbar"><span class="wordmark">Humble</span><button id="analysisNav" class="an-pill" aria-label="Анализ сделки" onclick="showAnalysis()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Анализ</span></button></header>
+    <header class="topbar"><span class="wordmark">Humble</span></header>
 
 
     <!-- ВХОД -->
@@ -62,10 +63,14 @@
     <!-- ГЛАВНАЯ -->
     <div id="homePage" class="hidden">
 
-        <section class="hero"><span class="hero-label">Профит сегодня</span><strong id="profileTodayPnl">0 ₽</strong><div class="hero-row"><div class="hero-sub"><span>За всё время</span><b id="profileTotalPnl">0 ₽</b></div></div></section>
+        <header class="greet"><p id="greetHello">Добрый день</p><span id="greetDate"></span></header>
+
+        <section class="hero"><span class="hero-label" id="monthLabel">Прибыль за месяц</span><strong id="monthPnl">0 ₽</strong></section>
 
         <button id="apiBanner" class="api-banner hidden" onclick="openApiSetup()"><span class="api-banner-ico"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v5M15 3v5M7 8h10v3a5 5 0 0 1-10 0V8Z"/><path d="M12 16v5"/></svg></span><span class="api-banner-text"><b>Подключите T-Invest API</b><small>Сделки будут подтягиваться сами</small></span><span class="api-banner-go">→</span></button>
 
+
+        <div id="chartCard" class="home-card"><div class="home-card-head"><h2>Динамика прибыли</h2><span id="chartRange"></span></div><div id="profitChart" class="profit-chart"></div><div id="chartAxis" class="chart-axis"></div><button type="button" id="balanceBtn" class="balance-link" onclick="openBalanceModal()">Указать стартовый баланс</button></div>
 
         <div class="calendar-section">
 
@@ -103,88 +108,47 @@
 
         </div>
 
+        <button type="button" id="goalCard" class="home-card goal-card empty" onclick="openGoalModal()"><div class="goal-top"><span class="goal-name" id="goalName">Поставить цель</span><span class="goal-pct" id="goalPct">+</span></div><div class="goal-bar"><i id="goalFill"></i></div><div class="goal-sub" id="goalSub">Нажмите, чтобы указать, что хотите и сколько нужно заработать</div></button>
+
     </div>
 
 
-    <!-- ПРОФИЛЬ -->
-    <div id="profilePage" class="hidden">
-
-        <h1>Итоги</h1>
-        <p class="subtitle">Итоги и валюта</p>
-
-        
-
-        <div class="details-card">
-
-            <div class="detail-row">
-                <span>Всего сделок</span>
-                <strong id="profileTrades">0</strong>
-            </div>
-
-            <div class="detail-row">
-                <span>Прибыльных</span>
-                <strong id="profileWins">0</strong>
-            </div>
-
-            <div class="detail-row">
-                <span>Убыточных</span>
-                <strong id="profileLosses">0</strong>
-            </div>
-
-            <div class="detail-row">
-                <span>Win Rate</span>
-                <strong id="profileWinRate">0%</strong>
-            </div>
-
-        </div>
-
-
-        <!-- НОВАЯ КНОПКА -->
-        <button class="all-trades-button" onclick="openAllTrades()">
-
-            <div>
-                <span>История</span>
-                <strong>Все сделки</strong>
-            </div>
-
-            <span class="all-trades-arrow">→</span>
-
-        </button>
-
-        <div class="currency-selector">
-            <label>Валюта</label>
-            <select id="currencySelect" onchange="handleCurrencyChange()">
-                <option value="RUB">Рубль (₽)</option>
-                <option value="USD">Доллар ($)</option>
-                <option value="EUR">Евро (€)</option>
-            </select>
-            <div class="exchange-rates">
-                <span id="exchangeRateInfo" class="rate-info">
-                    Курс: 1 $ = 100 ₽ | 1 € = 115 ₽
-                </span>
-                <button 
-                    id="updateRatesBtn" 
-                    class="update-rates-button"
-                    onclick="updateRatesFromAPI()">
-                    Обновить курс
-                </button>
-            </div>
-        </div>
+    <!-- Итоги убраны из интерфейса. Скрытый контейнер оставлен: в нём живут счётчики,
+         которые заполняет updateProfile() и которые показывают плашки «Сделок / Win Rate» на главной. -->
+    <div id="profilePage" class="hidden" style="display:none" aria-hidden="true">
+        <span id="profileTrades">0</span>
+        <span id="profileWins">0</span>
+        <span id="profileLosses">0</span>
+        <span id="profileWinRate">0%</span>
     </div>
-
 
 
     <!-- ПОРТФЕЛЬ -->
     <div id="portfolioPage" class="hidden">
 
         <section class="hero">
-            <span class="hero-label">Стоимость портфеля</span>
+            <div class="pf-hero-top">
+                <span class="hero-label">Стоимость портфеля</span>
+                <div class="cur-seg" id="curSeg" role="group" aria-label="Валюта">
+                    <button type="button" data-cur="RUB" onclick="setCurrency('RUB');syncCur()">₽</button>
+                    <button type="button" data-cur="USD" onclick="setCurrency('USD');syncCur()">$</button>
+                    <button type="button" data-cur="EUR" onclick="setCurrency('EUR');syncCur()">€</button>
+                </div>
+            </div>
             <strong id="pfTotal">—</strong>
             <div class="pf-hero-row">
                 <div class="hero-sub"><span>За день</span><b id="pfDaily">—</b></div>
                 <button id="pfRefresh" class="pf-refresh" aria-label="Обновить портфель" onclick="loadPortfolio(true)"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></svg></button>
             </div>
         </section>
+
+        <button class="all-trades-button" onclick="openAllTrades()">
+            <div>
+                <span>Период и итоги</span>
+                <strong>Аналитика</strong>
+            </div>
+            <span class="all-trades-arrow">→</span>
+        </button>
 
         <p id="pfStatus" class="auth-status hidden"></p>
 
@@ -193,25 +157,29 @@
         <div id="pfContent" class="hidden">
 
             <section class="pf-block">
-                <h2>Структура</h2>
-                <div class="pf-card">
-                    <div id="pfBar" class="pf-bar"></div>
-                    <div id="pfLegend" class="pf-legend"></div>
-                </div>
-            </section>
-
-            <section class="pf-block">
-                <h2>Свободные деньги</h2>
-                <div id="pfCash" class="pf-card"></div>
-            </section>
-
-            <section class="pf-block">
                 <h2>Позиции</h2>
                 <div id="pfPositions"></div>
             </section>
 
             <p id="pfUpdated" class="pf-note"></p>
         </div>
+
+        <div class="currency-selector pf-rates">
+            <select id="currencySelect" onchange="handleCurrencyChange();syncCur()" hidden>
+                <option value="RUB">Рубль (₽)</option>
+                <option value="USD">Доллар ($)</option>
+                <option value="EUR">Евро (€)</option>
+            </select>
+            <div class="exchange-rates">
+                <span id="exchangeRateInfo" class="rate-info">
+                    Курс: 1 $ = 100 ₽ | 1 € = 115 ₽
+                </span>
+                <button id="updateRatesBtn" class="update-rates-button" onclick="updateRatesFromAPI()">
+                    Обновить курс
+                </button>
+            </div>
+        </div>
+
 
     </div>
 
@@ -344,8 +312,8 @@
             <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg> Назад
         </button>
 
-        <h1>Все сделки</h1>
-        <p class="subtitle">История твоей торговли</p>
+        <h1>Аналитика</h1>
+        <p class="subtitle">Выбери даты — покажу итог и сделки за период</p>
 
 
         <!-- ПЕРИОД -->
@@ -380,6 +348,14 @@
             </button>
 
         </div>
+
+
+                <!-- СВОЙ ДИАПАЗОН ДАТ -->
+        <button class="range-open" id="rangeOpenBtn" onclick="openRangePicker()">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+            <span class="range-open-label" id="rangeBtnLabel">Выбрать даты</span>
+            <span class="range-open-chev">›</span>
+        </button>
 
 
         <!-- ИНФОРМАЦИЯ ЗА ПЕРИОД -->
@@ -509,7 +485,7 @@
         </h1>
 
         <p class="subtitle">
-            Заполни информацию о сделке
+            Достаточно инструмента, цен и результата
         </p>
 
         <div class="form">
@@ -562,22 +538,10 @@
             ></div>
 
 
-            <div class="field"><label>Stop Loss</label>
-
-            <input
-                id="stopLoss"
-                type="number"
-                placeholder="0"
-            ></div>
+            
 
 
-            <div class="field"><label>Take Profit</label>
-
-            <input
-                id="takeProfit"
-                type="number"
-                placeholder="0"
-            ></div></div>
+            </div>
 
 
             <label class="pnl-label">Результат, ₽</label>
@@ -589,13 +553,27 @@
             >
 
 
-            <label>Комментарий</label>
+            
+
+
+            <details id="moreFields" class="more-fields"><summary>Стоп, тейк и комментарий</summary><div class="more-body"><div class="grid2"><div class="field"><label>Stop Loss</label>
+
+            <input
+                id="stopLoss"
+                type="number"
+                placeholder="0"
+            ></div><div class="field"><label>Take Profit</label>
+
+            <input
+                id="takeProfit"
+                type="number"
+                placeholder="0"
+            ></div></div><label>Комментарий</label>
 
             <textarea
                 id="comment"
                 placeholder="Почему вошёл в сделку?"
-            ></textarea>
-
+            ></textarea></div></details>
 
             <button
                 id="saveTradeButton"
@@ -617,6 +595,7 @@
         <h1>Настройки</h1>
         <p class="subtitle">Персонализация приложения</p>
 
+        <h3 class="group-title">Внешний вид</h3>
         <div class="settings-card">
 
             <div class="setting-item">
@@ -642,6 +621,7 @@
 
         </div>
 
+        <h3 class="group-title">Аккаунт</h3>
         <!-- Email для входа -->
         <div class="account-section">
 
@@ -672,6 +652,7 @@
 
         </div>
 
+        <h3 class="group-title">Брокер</h3>
         <!-- Т-Инвестиции -->
         <div class="account-section">
 
@@ -718,6 +699,7 @@
 
         </div>
 
+        <h3 class="group-title">О приложении</h3>
         <!-- Правила пользования -->
         <div class="rules-section">
 
@@ -787,11 +769,78 @@
 <button id="homeNav" class="nav-button active" aria-label="Главная" onclick="showHome()"><span class="nav-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/></svg></span><span>Главная</span></button>
 <button id="portfolioNav" class="nav-button" aria-label="Портфель" onclick="showPortfolio()"><span class="nav-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 13h18"/></svg></span><span>Портфель</span></button>
 <button class="fab" aria-label="Добавить сделку" data-hint="На выбранный день" onclick="addTradeForSelectedDay()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-<button id="profileNav" class="nav-button" aria-label="Профиль" onclick="showProfile()"><span class="nav-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg></span><span>Итоги</span></button>
+<button id="analysisNav" class="nav-button" aria-label="Анализ сделки" onclick="showAnalysis()"><span class="nav-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span><span>Анализ</span></button>
 <button id="settingsNav" class="nav-button" aria-label="Настройки" onclick="showSettings()"><span class="nav-icon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></span><span>Настройки</span></button>
 </div>
 
     <!-- МОДАЛЬ ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ -->
+        <!-- ВЫБОР ПЕРИОДА (календарь) -->
+    <div id="rangeModal" class="modal hidden">
+        <div class="modal-overlay" onclick="closeRangePicker()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Выбор периода</span>
+                <button class="modal-close" onclick="closeRangePicker()" aria-label="Закрыть"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+            </div>
+            <div class="rg-sum">
+                <div id="rgSumFrom">Начало<b>—</b></div>
+                <div id="rgSumTo">Конец<b>—</b></div>
+            </div>
+            <div class="rg-nav">
+                <button id="rgPrev" onclick="rgShift(-1)" aria-label="Предыдущий месяц">‹</button>
+                <span class="rg-month" id="rgMonth"></span>
+                <button id="rgNext" onclick="rgShift(1)" aria-label="Следующий месяц">›</button>
+            </div>
+            <div class="rg-grid" id="rgGrid"></div>
+            <div class="modal-footer">
+                <button class="modal-button" onclick="rgReset()">Сбросить</button>
+                <button class="modal-button rg-apply" id="rgApply" onclick="rgApply()">Применить</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="balanceModal" class="modal hidden">
+        <div class="modal-overlay" onclick="closeBalanceModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Стартовый баланс</span>
+                <button class="modal-close" onclick="closeBalanceModal()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+            </div>
+            <div class="modal-form">
+                <div class="field"><label for="balanceInput">Сумма на счёте до первой сделки журнала, ₽</label>
+                    <input id="balanceInput" type="number" inputmode="decimal" placeholder="Например 100000"></div>
+                <p class="balance-hint">Дальше приложение прибавляет результат каждой сделки, и на графике по нажатию виден общий баланс на этот день.</p>
+                <p id="balanceError" class="goal-error hidden"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="balanceDeleteBtn" class="modal-button hidden" onclick="deleteBalance()">Удалить</button>
+                <button type="button" class="modal-button rg-apply" onclick="saveBalance()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="goalModal" class="modal hidden">
+        <div class="modal-overlay" onclick="closeGoalModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Цель</span>
+                <button class="modal-close" onclick="closeGoalModal()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+            </div>
+            <div class="modal-form">
+                <div class="field"><label for="goalTitleInput">Что хотите</label>
+                    <input id="goalTitleInput" type="text" maxlength="60" placeholder="Например, новый ноутбук" autocomplete="off"></div>
+                <div class="field"><label for="goalAmountInput">Сумма, ₽</label>
+                    <input id="goalAmountInput" type="number" inputmode="decimal" placeholder="Например 150000"></div>
+                <p id="goalError" class="goal-error hidden"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="goalDeleteBtn" class="modal-button hidden" onclick="deleteGoal()">Удалить</button>
+                <button type="button" class="modal-button rg-apply" onclick="saveGoal()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
     <div id="deleteConfirmModal" class="modal hidden">
 
         <div class="modal-overlay" onclick="closeDeleteSyncedConfirm()"></div>
