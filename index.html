@@ -98,16 +98,6 @@
 
         </div>
 
-        <div id="dayTrades" class="day-trades hidden">
-
-            <h2 id="selectedDayTitle">
-                Сделки
-            </h2>
-
-            <div id="selectedDayList"></div>
-
-        </div>
-
         <button type="button" id="goalCard" class="home-card goal-card empty" onclick="openGoalModal()"><div class="goal-top"><span class="goal-name" id="goalName">Поставить цель</span><span class="goal-pct" id="goalPct">+</span></div><div class="goal-bar"><i id="goalFill"></i></div><div class="goal-sub" id="goalSub">Нажмите, чтобы указать, что хотите и сколько нужно заработать</div></button>
 
     </div>
@@ -816,6 +806,20 @@
             <div class="modal-footer">
                 <button type="button" id="balanceDeleteBtn" class="modal-button hidden" onclick="deleteBalance()">Удалить</button>
                 <button type="button" class="modal-button rg-apply" onclick="saveBalance()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dayTrades" class="modal day-modal hidden">
+        <div class="modal-overlay" onclick="closeDayTrades()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="selectedDayTitle">Сделки</span>
+                <button class="modal-close" onclick="closeDayTrades()" aria-label="Закрыть"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+            </div>
+            <div id="selectedDayList" class="day-modal-list"></div>
+            <div class="modal-footer">
+                <button type="button" class="modal-button rg-apply" onclick="addTradeFromDayModal()">Добавить сделку</button>
             </div>
         </div>
     </div>

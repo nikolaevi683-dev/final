@@ -898,3 +898,9 @@ html.light-theme{
 @media (prefers-reduced-motion:reduce){
  :is(.add-button,.save-button,.an-go,.fab,.modal-button,.delete-button,.logout-button,#longButton,#shortButton,.an-seg button,.update-rates-button){animation:none!important}
 }
+
+/* ===== Сделки дня — модальное окно ===== */
+.day-modal .modal-content{max-height:82vh;max-height:82dvh;display:flex;flex-direction:column}
+.day-modal-list{overflow-y:auto;overscroll-behavior:contain;display:grid;gap:10px;min-height:0;padding-bottom:2px}
+.day-modal .card{background:var(--surface-2)}
+.day-modal .empty{padding:18px 0;text-align:center;color:var(--muted)}

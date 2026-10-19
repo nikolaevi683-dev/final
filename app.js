@@ -34,6 +34,8 @@ let lastRatesUpdate = null;
 
 let detailsReturnPage = "home";
 
+let returnToDayModal = false;
+
 // =========================================
 // CURRENCY DATA
 // =========================================
@@ -1218,9 +1220,7 @@ function changeMonth(step) {
     renderCalendar();
 
 
-    document
-        .getElementById("dayTrades")
-        .classList.add("hidden");
+    closeDayTrades();
 
 
     selectedCalendarDate = null;
@@ -1367,6 +1367,19 @@ function showDayTrades(
 }
 
 
+function closeDayTrades() {
+    document.getElementById("dayTrades").classList.add("hidden");
+}
+
+function addTradeFromDayModal() {
+    closeDayTrades();
+    addTradeForSelectedDay();
+}
+
+document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeDayTrades();
+});
+
 // =========================================
 // ADD TRADE FOR SELECTED DAY
 // =========================================
@@ -1406,6 +1419,11 @@ function createTradeCard(trade) {
     item.append(date, symbol, info);
 
     item.onclick = function () {
+        // если карточка открыта из окна «Сделки дня» — закрываем окно
+        // и после просмотра сделки вернём пользователя обратно в него
+        const dayModal = document.getElementById("dayTrades");
+        returnToDayModal = !dayModal.classList.contains("hidden");
+        if (returnToDayModal) closeDayTrades();
         openTradeDetails(trade);
     };
 
@@ -1980,7 +1998,6 @@ async function fetchExchangeRates() {
         exchangeRates.EUR =
             1 / data.rates.EUR;
 
-
         // Сохраняем время обновления
         lastRatesUpdate =
             new Date();
@@ -2293,7 +2310,13 @@ function closeTradeDetails() {
         document.getElementById("homePage").classList.remove("hidden");
 
         renderCalendar();
+
+        if (returnToDayModal && selectedCalendarDate) {
+            showDayTrades(selectedCalendarDate);
+        }
     }
+
+    returnToDayModal = false;
 }
 
 
@@ -2974,7 +2997,6 @@ async function connectTinkoff() {
     const {
         data: { session }
     } = await db.auth.getSession();
-
 
     if (!session) {
 
@@ -3974,7 +3996,6 @@ function anOnPortfolio() {
 }
 
 // ---------- числа и формат ----------
-
 function anNum(id) {
     const v = parseFloat(String(document.getElementById(id).value).replace(/\s/g, "").replace(",", "."));
     return isFinite(v) ? v : NaN;
