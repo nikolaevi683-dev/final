@@ -3667,6 +3667,7 @@ async function loadPortfolio() {
         portfolioData = result;
         portfolioLoadedAt = Date.now();
         renderPortfolio();
+        try { renderBalanceLink(); renderProfitChart(); } catch (e) { /* главная ещё не готова */ }
         if (typeof anOnPortfolio === "function") anOnPortfolio();
 
     } catch (e) {
@@ -4742,6 +4743,33 @@ function renderMonthSummary() {
         pnlEl.classList.toggle("pos", pnl > 0);
         pnlEl.classList.toggle("neg", pnl < 0);
     }
+    try { renderMonthPct(); } catch (e) { console.error("renderMonthPct:", e); }
+}
+
+// Прибыль месяца в процентах от портфеля на начало этого месяца
+function renderMonthPct() {
+    const el = document.getElementById("monthPct");
+    if (!el) return;
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    const pnl = getMonthTrades().reduce((s, t) => s + Number(t.pnl), 0);
+    const prev = new Date(year, month, 0); // последний день прошлого месяца
+    const prevDay = prev.getFullYear() + "-" + String(prev.getMonth() + 1).padStart(2, "0") + "-" + String(prev.getDate()).padStart(2, "0");
+    const base = balanceAt(prevDay);
+
+    el.classList.remove("hidden", "pos", "neg", "empty");
+    if (base === null) {
+        el.classList.add("empty");
+        el.textContent = "Указать баланс для %";
+        return;
+    }
+    if (!(base > 0)) { el.classList.add("hidden"); return; }
+    const pct = pnl / base * 100;
+    const txt = (pct > 0 ? "+" : pct < 0 ? "\u2212" : "") + Math.abs(pct).toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
+    el.classList.toggle("pos", pct > 0);
+    el.classList.toggle("neg", pct < 0);
+    el.textContent = txt;
+    el.title = "Баланс на начало месяца: " + formatBalance(base);
 }
 
 // График накопленной прибыли по дням со сделками выбранного месяца
@@ -4940,6 +4968,7 @@ function storeStartBalance(n) {
 }
 
 function renderBalanceLink() {
+    try { renderMonthPct(); } catch (e) { /* не критично */ }
     const btn = document.getElementById("balanceBtn");
     if (!btn) return;
     if (!goalUid) {
@@ -4953,9 +4982,9 @@ function renderBalanceLink() {
         return;
     }
     const s = loadStartBalance();
-    btn.textContent = s === null
+    btn.innerHTML = s === null
         ? "Указать стартовый баланс"
-        : "Стартовый баланс: " + formatBalance(s) + " · изменить";
+        : 'Стартовый баланс: <span class="sens">' + formatBalance(s) + "</span> · изменить";
 }
 
 function openBalanceModal() {
@@ -5099,3 +5128,23 @@ function deleteGoal() {
     closeGoalModal();
     renderGoal();
 }
+
+// =========================================
+// РЕЖИМ ПРИВАТНОСТИ: блюр баланса по всему приложению
+// =========================================
+function setPrivacy(on, silent) {
+    document.documentElement.classList.toggle("privacy", on);
+    try { localStorage.setItem("hideBalance", on ? "1" : "0"); } catch (e) { /* хранилище недоступно */ }
+    const btn = document.getElementById("privacyBtn");
+    if (!btn) return;
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", on ? "Показать баланс" : "Скрыть баланс");
+    if (silent) return;
+    document.getElementById("privacyTip").textContent = on ? "Баланс скрыт" : "Баланс виден";
+    btn.classList.remove("flash"); void btn.offsetWidth; btn.classList.add("flash");
+    clearTimeout(setPrivacy.t);
+    setPrivacy.t = setTimeout(() => btn.classList.remove("flash"), 1500);
+    if (navigator.vibrate) navigator.vibrate(8);
+}
+function togglePrivacy() { setPrivacy(!document.documentElement.classList.contains("privacy")); }
+document.addEventListener("DOMContentLoaded", () => setPrivacy(document.documentElement.classList.contains("privacy"), true));

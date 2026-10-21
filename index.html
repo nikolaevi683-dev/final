@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Humble</title>
     <meta name="theme-color" content="#070b16">
-    <script>try{if(localStorage.getItem("appTheme")==="light")document.documentElement.classList.add("light-theme")}catch(e){}</script>
+    <script>try{if(localStorage.getItem("appTheme")==="light")document.documentElement.classList.add("light-theme");if(localStorage.getItem("hideBalance")==="1")document.documentElement.classList.add("privacy")}catch(e){}</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=JetBrains+Mono:wght@400..700&family=Onest:wght@400..700&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
 
 <div class="app">
 
-    <header class="topbar"><span class="wordmark">Humble</span></header>
+    <header class="topbar"><span class="wordmark">Humble</span><button type="button" id="privacyBtn" class="privacy-btn" aria-pressed="false" aria-label="Скрыть баланс" onclick="togglePrivacy()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle class="eye-pupil" cx="12" cy="12" r="3"/><path class="eye-slash" d="M4 4l16 16"/></svg><span class="privacy-tip" id="privacyTip" aria-live="polite"></span></button></header>
 
 
     <!-- ВХОД -->
@@ -60,7 +60,7 @@
 
         <header class="greet"><p id="greetHello">Добрый день</p><span id="greetDate"></span></header>
 
-        <section class="hero"><span class="hero-label" id="monthLabel">Прибыль за месяц</span><strong id="monthPnl">0 ₽</strong></section>
+        <section class="hero"><span class="hero-label" id="monthLabel">Прибыль за месяц</span><strong id="monthPnl">0 ₽</strong><button type="button" id="monthPct" class="hero-pct hidden" onclick="openBalanceModal()"></button></section>
 
         <button id="apiBanner" class="api-banner hidden" onclick="openApiSetup()"><span class="api-banner-ico"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v5M15 3v5M7 8h10v3a5 5 0 0 1-10 0V8Z"/><path d="M12 16v5"/></svg></span><span class="api-banner-text"><b>Подключите T-Invest API</b><small>Сделки будут подтягиваться сами</small></span><span class="api-banner-go">→</span></button>
 

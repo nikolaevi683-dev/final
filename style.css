@@ -904,3 +904,34 @@ html.light-theme{
 .day-modal-list{overflow-y:auto;overscroll-behavior:contain;display:grid;gap:10px;min-height:0;padding-bottom:2px}
 .day-modal .card{background:var(--surface-2)}
 .day-modal .empty{padding:18px 0;text-align:center;color:var(--muted)}
+
+/* ===== Приватность: кнопка-глаз и блюр баланса ===== */
+.privacy-btn{position:relative;width:44px;height:44px;border-radius:50%;background:var(--surface);color:var(--muted);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px var(--line);transition:background .25s,color .25s,transform .15s,box-shadow .25s}
+.privacy-btn:active{transform:scale(.92)}
+.privacy-btn .ico{width:21px;height:21px;overflow:visible}
+.privacy-btn .eye-slash{stroke-dasharray:24;stroke-dashoffset:24;transition:stroke-dashoffset .35s cubic-bezier(.4,0,.2,1)}
+.privacy-btn .eye-pupil{transition:transform .3s,opacity .3s;transform-origin:12px 12px}
+html.privacy .privacy-btn{background:color-mix(in srgb,var(--accent) 18%,var(--surface));color:var(--accent);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 55%,transparent),0 0 18px color-mix(in srgb,var(--accent) 28%,transparent)}
+html.privacy .privacy-btn .eye-slash{stroke-dashoffset:0}
+html.privacy .privacy-btn .eye-pupil{transform:scale(.55);opacity:.7}
+.privacy-tip{position:absolute;right:0;top:calc(100% + 8px);padding:6px 12px;border-radius:999px;background:var(--text);color:var(--bg);font-size:12px;font-weight:600;white-space:nowrap;opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .2s,transform .2s}
+.privacy-btn.flash .privacy-tip{opacity:1;transform:none}
+
+.sens{display:inline-block}
+.sens,#pfTotal,#pfDaily,#pfPositions :is(.pf-group>span,.pf-pos-pnl b,.pf-stats b,.pf-margin b),#pfLegend .pf-sum,#pfCash b,.pc-tip b{transition:filter .4s cubic-bezier(.4,0,.2,1),opacity .4s}
+html.privacy :is(.sens,#pfTotal,#pfDaily,#pfPositions .pf-group>span,#pfPositions .pf-pos-pnl b,#pfPositions .pf-stats b,#pfPositions .pf-margin b,#pfLegend .pf-sum,#pfCash b,.pc-tip b){filter:blur(9px);opacity:.75;user-select:none;-webkit-user-select:none}
+html.privacy :is(#anPortfolio,#anFree,#balanceInput):not(:focus){filter:blur(7px);opacity:.75}
+@media (prefers-reduced-motion:reduce){.privacy-btn .eye-slash,.privacy-btn .eye-pupil,.privacy-tip{transition:none}}
+
+/* ===== Процент месяца к портфелю (без рамки) ===== */
+.hero-pct{display:block;margin:-6px 0 2px;padding:0;background:none;box-shadow:none;border:0;text-align:left;font-family:var(--display);font-weight:500;font-size:clamp(20px,6vw,26px);line-height:1.2;letter-spacing:-.03em;color:var(--muted);transition:opacity .15s}
+.hero-pct:active{opacity:.6}
+.hero-pct.pos{color:var(--profit)}
+.hero-pct.neg{color:var(--loss)}
+.hero-pct.empty{font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0;color:var(--accent)}
+.hero-pct.hidden{display:none!important}
+
+/* ===== Приватность: блюр ВСЕХ денежных значений ===== */
+html.privacy :is(#monthPnl,#periodPnl,#detailsPnl,#profileTodayPnl,#profileTotalPnl,.calendar-pnl,.card b,.day-modal-list b,#allTradesList b,.details-card strong,.result strong,#goalSub,#profitChart svg,#profitChart .pc-dot,.an-tile b,.an-tile small,.an-res-row b,#anChips .an-chip){filter:blur(9px);opacity:.75;user-select:none;-webkit-user-select:none}
+:is(#monthPnl,#periodPnl,#detailsPnl,.calendar-pnl,.card b,.details-card strong,#goalSub,#profitChart svg,.an-tile b,.an-res-row b){transition:filter .4s cubic-bezier(.4,0,.2,1),opacity .4s}
+html.privacy .details-card .detail-row:first-child strong{filter:none;opacity:1}
