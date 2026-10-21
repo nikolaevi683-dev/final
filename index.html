@@ -31,23 +31,18 @@
     <div id="authPage" class="hidden">
 
         <h1>Humble</h1>
-        <p class="subtitle">Войдите по email, чтобы сделки не терялись при смене браузера или устройства</p>
+        <p class="subtitle">Войдите по email и паролю, чтобы сделки не терялись при смене браузера или устройства</p>
 
         <div class="form">
 
             <div id="authEmailStep" class="auth-step">
                 <label for="authEmail">Email</label>
                 <input id="authEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com">
-                <button id="authSendButton" class="save-button" onclick="sendLoginLink()">Получить письмо</button>
-            </div>
-
-            <div id="authCodeStep" class="auth-step hidden">
-                <label for="authCode">Код из письма</label>
-                <input id="authCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="······">
-                <button id="authVerifyButton" class="save-button" onclick="verifyEmailCode()">Войти</button>
-                <div class="code-actions">
-                    <button id="authResendButton" onclick="sendLoginLink()">Отправить ещё раз</button>
-                    <button onclick="authChangeEmail()">Другой email</button>
+                <label for="authPassword">Пароль</label>
+                <input id="authPassword" type="password" autocomplete="current-password" placeholder="Минимум 6 символов">
+                <button id="authSendButton" class="save-button" onclick="signInPassword()">Войти</button>
+                <div class="code-actions" style="justify-content:center">
+                    <button id="authSignUpButton" onclick="signUpPassword()">Создать аккаунт</button>
                 </div>
             </div>
 
@@ -629,11 +624,18 @@
                     placeholder="you@example.com"
                 >
 
+                <input
+                    id="linkPasswordInput"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="Пароль (минимум 6 символов)"
+                >
+
                 <button
                     id="linkEmailButton"
                     class="update-rates-button"
                     onclick="linkEmail()">
-                    Привязать email
+                    Привязать email и пароль
                 </button>
 
             </div>
@@ -900,80 +902,95 @@
 <script src="app.js"></script>
 <script src="ui.js"></script>
 <script>
-/* Вход по email: код из письма + ссылка, понятные ошибки, защита от частых запросов */
+/* Вход по email и паролю */
 (function () {
     const $ = (id) => document.getElementById(id);
-    let timer = null;
+    const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
     function friendly(e) {
         const m = ((e && e.message) || "").toLowerCase();
         const c = String((e && e.code) || "");
-        if (c === "over_email_send_rate_limit" || m.includes("rate limit") || m.includes("security purposes"))
-            return "Слишком частые запросы. Подождите минуту и попробуйте снова.";
-        if (m.includes("signups not allowed") || m.includes("signups") && m.includes("disabled"))
-            return "Вход по email отключён в настройках проекта Supabase.";
+        if (c === "invalid_credentials" || m.includes("invalid login credentials")) return "Неверный email или пароль.";
+        if (c === "user_already_exists" || m.includes("already registered") || m.includes("already been registered")) return "Такой email уже зарегистрирован. Нажмите «Войти».";
+        if (c === "weak_password" || m.includes("at least") && m.includes("character")) return "Пароль слишком простой: минимум 6 символов.";
+        if (c === "over_request_rate_limit" || c === "over_email_send_rate_limit" || m.includes("rate limit")) return "Слишком частые запросы. Подождите минуту и попробуйте снова.";
+        if (c === "signup_disabled" || m.includes("signups not allowed")) return "Регистрация отключена в настройках Supabase.";
         if (m.includes("email") && m.includes("invalid")) return "Проверьте адрес email.";
         if (m.includes("failed to fetch") || m.includes("network")) return "Нет связи с сервером. Проверьте интернет.";
-        return "Не удалось отправить письмо: " + ((e && e.message) || "неизвестная ошибка");
+        return "Ошибка: " + ((e && e.message) || "неизвестная ошибка");
     }
+    window.authFriendly = friendly;
 
-    function cooldown(sec) {
-        const btn = $("authResendButton");
-        clearInterval(timer);
-        btn.disabled = true;
-        timer = setInterval(() => {
-            sec--;
-            if (sec <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = "Отправить ещё раз"; }
-            else btn.textContent = "Отправить ещё раз (" + sec + ")";
-        }, 1000);
-        btn.textContent = "Отправить ещё раз (" + sec + ")";
-    }
-
-    window.sendLoginLink = async function () {
+    function readForm() {
         const email = $("authEmail").value.trim();
-        if (!/^\S+@\S+\.\S+$/.test(email)) { showAuthStatus("authStatus", "Введите корректный email", true); return; }
-        const btn = $("authSendButton");
-        btn.disabled = true; btn.textContent = "Отправляем…";
+        const password = $("authPassword").value;
+        if (!EMAIL_RE.test(email)) { showAuthStatus("authStatus", "Введите корректный email", true); return null; }
+        if (password.length < 6) { showAuthStatus("authStatus", "Пароль: минимум 6 символов", true); return null; }
+        return { email, password };
+    }
+
+    function busy(on) {
+        $("authSendButton").disabled = on;
+        $("authSignUpButton").disabled = on;
+    }
+
+    window.signInPassword = async function () {
+        const f = readForm(); if (!f) return;
+        busy(true);
         try {
-            const options = { shouldCreateUser: true };
-            // ссылка возвращает на эту же страницу, но без хвоста из старых токенов
-            if (location.protocol.startsWith("http")) options.emailRedirectTo = location.origin + location.pathname;
-            const { error } = await db.auth.signInWithOtp({ email, options });
-            if (error) { console.error("Login error:", error); showAuthStatus("authStatus", friendly(error), true); return; }
-            $("authEmailStep").classList.add("hidden");
-            $("authCodeStep").classList.remove("hidden");
-            showAuthStatus("authStatus", "Письмо отправлено на " + email + ". Введите код из него или откройте ссылку на этом устройстве.");
-            cooldown(60);
-            $("authCode").focus();
+            const { error } = await db.auth.signInWithPassword(f);
+            if (error) showAuthStatus("authStatus", friendly(error), true);
         } catch (e) {
             console.error(e); showAuthStatus("authStatus", friendly(e), true);
-        } finally {
-            btn.disabled = false; btn.textContent = "Получить письмо";
-        }
+        } finally { busy(false); }
     };
 
-    window.verifyEmailCode = async function () {
-        const email = $("authEmail").value.trim();
-        const token = $("authCode").value.replace(/\s/g, "");
-        if (token.length < 6) { showAuthStatus("authStatus", "Введите код из письма", true); return; }
-        const btn = $("authVerifyButton");
-        btn.disabled = true; btn.textContent = "Проверяем…";
-        const { error } = await db.auth.verifyOtp({ email, token, type: "email" });
-        btn.disabled = false; btn.textContent = "Войти";
-        if (error) { console.error("Verify error:", error); showAuthStatus("authStatus", "Код неверный или устарел. Запросите новый.", true); }
+    window.signUpPassword = async function () {
+        const f = readForm(); if (!f) return;
+        busy(true);
+        try {
+            const { data, error } = await db.auth.signUp(f);
+            if (error) { showAuthStatus("authStatus", friendly(error), true); return; }
+            if (!data.session) {
+                showAuthStatus("authStatus", "Аккаунт создан, но Supabase ждёт подтверждения почты. Отключите «Confirm email» в Authentication → Sign In / Providers.", true);
+            }
+        } catch (e) {
+            console.error(e); showAuthStatus("authStatus", friendly(e), true);
+        } finally { busy(false); }
     };
 
-    window.authChangeEmail = function () {
-        clearInterval(timer);
-        $("authCodeStep").classList.add("hidden");
-        $("authEmailStep").classList.remove("hidden");
-        $("authStatus").classList.add("hidden");
-        $("authCode").value = "";
-        $("authEmail").focus();
+    /* привязка email и пароля к гостевому аккаунту (экран «Настройки») */
+    window.linkEmail = async function () {
+        const email = $("linkEmailInput").value.trim();
+        const password = $("linkPasswordInput").value;
+        if (!EMAIL_RE.test(email)) { showAuthStatus("accountStatus", "Введите корректный email", true); return; }
+        if (password.length < 6) { showAuthStatus("accountStatus", "Пароль: минимум 6 символов", true); return; }
+        const btn = $("linkEmailButton");
+        const label = btn.textContent;
+        btn.disabled = true; btn.textContent = "Сохраняем...";
+        try {
+            const { data, error } = await db.auth.updateUser({ email, password });
+            if (error) {
+                console.error("Link email error:", error);
+                const em = ((error.message || "") + " " + (error.code || "")).toLowerCase();
+                const exists = em.includes("already") || em.includes("email_exists") || em.includes("user_already_exists");
+                showAuthStatus("accountStatus", exists ? "Этот email уже зарегистрирован. Прокрутите вниз, нажмите «Выйти» и войдите с ним на экране входа." : friendly(error), true);
+                return;
+            }
+            if (data && data.user && data.user.new_email) {
+                showAuthStatus("accountStatus", "Supabase ждёт подтверждения почты. Отключите «Confirm email» в Authentication → Sign In / Providers и повторите.", true);
+                return;
+            }
+            $("linkPasswordInput").value = "";
+            showAuthStatus("accountStatus", "Готово: теперь можно входить по email и паролю с любого устройства.");
+            updateAccountSection();
+        } catch (e) {
+            console.error(e); showAuthStatus("accountStatus", friendly(e), true);
+        } finally { btn.disabled = false; btn.textContent = label; }
     };
 
-    $("authEmail").addEventListener("keydown", (e) => { if (e.key === "Enter") sendLoginLink(); });
-    $("authCode").addEventListener("keydown", (e) => { if (e.key === "Enter") verifyEmailCode(); });
+    $("authEmail").addEventListener("keydown", (e) => { if (e.key === "Enter") $("authPassword").focus(); });
+    $("authPassword").addEventListener("keydown", (e) => { if (e.key === "Enter") signInPassword(); });
 })();
 </script>
 <script>
