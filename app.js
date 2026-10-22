@@ -4502,6 +4502,25 @@ function anRenderFound() {
     let html = "";
     html += row("Тренд D / W", `<b>${AN_TREND[A.trend]}, фаза: ${AN_PHASE[A.phase]}<small>${anEsc(A.trendDetail)}</small></b>`);
 
+    const S = A.strat;
+    if (S) {
+        const SMAP = { WATCH: "наблюдение", NEAR_SUPPORT: "цена у SUPPORT", CONFIRMED: "разворот подтверждён", INVALIDATED: "сценарий отменён", NO_SCENARIO: "сценария нет", ERROR: "ошибка" };
+        const zr = z => anPx(z.lo) + " – " + anPx(z.hi);
+        const L = S.levels || {};
+        const checks = (S.items || []).map(i => (i.ok ? "✓ " : "✗ ") + anEsc(i.label)).join("<br>");
+        html += row("Стратегия «основание импульса → разворот → цель»",
+            `<b>Соответствие ${S.match} % · ${anEsc(SMAP[S.status] || S.status)}<small>${anEsc(S.reason || "")}</small></b>`);
+        if (checks) html += row("Условия стратегии", `<b>${checks}</b>`);
+        const parts = [];
+        if (L.support) parts.push("SUPPORT " + zr(L.support));
+        if (L.reversal) parts.push("REVERSAL " + zr(L.reversal));
+        if (L.target) parts.push("цель " + zr(L.target));
+        if (parts.length) html += row("Уровни стратегии", `<b>${parts.join("<br>")}</b>`);
+        if (S.entry != null) {
+            html += row("Сигнал стратегии", `<b>${S.action === "ENTER_SHORT" ? "Шорт" : "Лонг"} (сетап ${anEsc(S.setup || "")}): вход ${anPx(S.entry)}, стоп ${anPx(S.stop)}, цели ${S.targets.map(anPx).join(" → ")}</b>`);
+        }
+    }
+
     if (A.levels.length) {
         html += row("Ключевые уровни", `<div class="an-tags">${A.levels.map(l =>
             `<span class="an-tag ${l.kind}">${anPx(l.price)}${l.touches > 1 ? " ×" + l.touches : ""}</span>`).join("")}</div>`);
