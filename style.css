@@ -1,4 +1,4 @@
-/* HUMBLE v3 — графичный минимализм. Тёмная по умолчанию, светлая: html.light-theme */
+/* NCAP v3 — графичный минимализм. Тёмная по умолчанию, светлая: html.light-theme */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
  --glow-1:rgba(196,181,253,.26);--glow-2:rgba(110,231,183,.15);--art:.30;
@@ -465,7 +465,7 @@ html.light-theme{--warn:#b7791f}
 .an-rules li{font-size:13px;line-height:1.45;color:var(--muted)}
 .an-rules b{color:var(--text);font-weight:600}
 
-/* ================= HUMBLE · ЭТАП 1: токены, шапка, навигация, переходы ================= */
+/* ================= NCAP · ЭТАП 1: токены, шапка, навигация, переходы ================= */
 :root{
  --bg:#0a0f0d;--surface:#111814;--surface-2:#19221d;--surface-3:#222d27;
  --text:#eef4ef;--muted:#7f8d85;--line:rgba(255,255,255,.07);--line-hi:rgba(255,255,255,.13);
@@ -564,7 +564,7 @@ html.light-theme{--glass:color-mix(in srgb,var(--surface) 62%,transparent);--gla
 
 /* нижняя капсула: более прозрачная, видно фон сквозь неё */
 .bottom-nav{background:color-mix(in srgb,var(--surface) 66%,transparent);box-shadow:var(--glass-edge),0 16px 36px -20px rgba(0,0,0,.55)}
-/* ================= HUMBLE · CALM: тихая палитра, мягкие формы, живой фон ================= */
+/* ================= NCAP · CALM: тихая палитра, мягкие формы, живой фон ================= */
 :root{
  --bg:#0f1514;--surface:#161e1d;--surface-2:#1e2827;--surface-3:#273331;
  --text:#e8eeeb;--muted:#8a9893;--line:rgba(232,238,235,.06);--line-hi:rgba(232,238,235,.11);

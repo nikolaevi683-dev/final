@@ -1,4 +1,4 @@
-/* Humble · ui.js (этап 1): только оформление. Бизнес-логику app.js не трогает. */
+/* Ncap · ui.js (этап 1): только оформление. Бизнес-логику app.js не трогает. */
 (() => {
   const ORDER = {authPage:-1,homePage:0,portfolioPage:1,analysisPage:3,settingsPage:4,allTradesPage:10,tradeDetails:11,tradePage:12};
   const pages = Object.keys(ORDER).map(id => document.getElementById(id)).filter(Boolean);
@@ -39,7 +39,7 @@
     t = setTimeout(() => root.classList.remove('theme-anim'), 350);
   }).observe(root, {attributes: true, attributeFilter: ['class']});
 })();
-/* ===== Humble · Calm: живые детали (логику app.js не трогает) ===== */
+/* ===== Ncap · Calm: живые детали (логику app.js не трогает) ===== */
 (() => {
   const $ = id => document.getElementById(id), body = document.body, root = document.documentElement;
   const still = matchMedia('(prefers-reduced-motion:reduce)').matches;
