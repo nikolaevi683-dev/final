@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=JetBrains+Mono:wght@400..700&family=Onest:wght@400..700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="tabs.css">
 </head>
 
 <body>
@@ -173,7 +174,7 @@
     <div id="analysisPage" class="hidden">
 
         <section class="an-head">
-            <span class="hero-label">Анализ сделки</span>
+            <h1 class="an-title">Анализ сделки</h1><p class="an-sub-title">Оцените сетап до входа: найдите инструмент, выберите направление и проверьте план</p><p class="an-step"><i>1</i>Инструмент</p>
             <div class="an-search">
                 <input id="anTicker" type="text" placeholder="Введите тикер, например Si" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Тикер">
                 <button id="anFind" class="an-go" onclick="anFind()">Найти</button>
@@ -187,9 +188,11 @@
             <a id="anChartLink" class="an-chart-link" href="#" target="_blank" rel="noopener">Открыть в TradingView ↗</a>
         </div>
 
-        <div id="anSegDir" class="an-seg an-dir"></div>
+        <p class="an-step"><i>2</i>Направление</p>
+<div id="anSegDir" class="an-seg an-dir"></div>
 
-        <section id="anScore" class="an-score an-idle">
+        <p class="an-step an-step-score"><i>3</i>Оценка сетапа</p>
+<section id="anScore" class="an-score an-idle">
             <div class="an-score-top">
                 <div id="anRing" class="an-ring an-red">
                     <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="rg-bg" cx="60" cy="60" r="52"/><circle id="anRingFg" class="rg-fg" cx="60" cy="60" r="52" transform="rotate(-90 60 60)"/></svg>
@@ -204,7 +207,8 @@
             <div id="anBars" class="an-bars"></div>
         </section>
 
-        <section id="anPlan" class="an-plan">
+        <p class="an-step"><i>4</i>План сделки</p>
+<section id="anPlan" class="an-plan">
             <div class="an-grid">
                 <label class="an-field"><span>Вход</span><input id="anEntry" type="text" inputmode="decimal" placeholder="цена"></label>
                 <label class="an-field"><span>Стоп</span><input id="anStop" type="text" inputmode="decimal" placeholder="цена"></label>
@@ -214,7 +218,7 @@
         </section>
 
         <details id="anMore" class="an-more">
-            <summary>Подробнее</summary>
+            <summary>Чек-лист, риск и параметры</summary>
             <div class="an-more-body">
 
                 <div class="an-sub">
@@ -578,7 +582,7 @@
         <button class="back-button" onclick="showHome()"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg> Назад</button>
 
         <h1>Настройки</h1>
-        <p class="subtitle">Персонализация приложения</p>
+        <p class="subtitle">Внешний вид, аккаунт и подключение брокера</p>
 
         <h3 class="group-title">Внешний вид</h3>
         <div class="settings-card">
@@ -644,11 +648,11 @@
 
         </div>
 
-        <h3 class="group-title">Брокер</h3>
+        <h3 class="group-title">Т-Инвестиции</h3>
         <!-- Т-Инвестиции -->
         <div class="account-section">
 
-            <label>Т-Инвестиции</label>
+            <label>Токен Т-Инвестиций (только чтение)</label>
 
             <p class="rate-info">
                 Токен хранится в зашифрованном виде на сервере и нигде не показывается повторно
@@ -902,6 +906,7 @@
 <script src="app.js"></script>
 <script src="ui.js"></script>
 <script src="onboarding.js"></script>
+<script src="coupons.js"></script>
 <script>
 /* Вход по email и паролю */
 (function () {

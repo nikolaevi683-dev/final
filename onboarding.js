@@ -129,7 +129,7 @@
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'tour-replay'; b.textContent = 'Показать обучение заново';
     b.onclick = () => { if (typeof window.showHome === 'function') window.showHome(); setTimeout(window.startTour, 350); };
-    sp.append(b);
+    const rs = sp.querySelector('.rules-section'); rs ? rs.before(b) : sp.append(b);
   }
 
   /* автозапуск при первом входе: ждём, пока скроется экран входа и откроется главная */

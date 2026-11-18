@@ -1,0 +1,55 @@
+/* Ncap · tabs.css: единый вид вкладок (подключается после style.css) */
+.pf-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.pf-tiles .all-trades-button{margin-top:0;padding:16px 18px;border-radius:22px;min-width:0}
+.pf-tiles .all-trades-button span:first-child{font-size:12px}
+.pf-tiles .all-trades-button strong{font-size:16px}
+.pf-rates{margin-top:26px;padding-top:16px;border-top:1px solid var(--line)}
+#settingsPage .group-title{margin:26px 6px 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#settingsPage .settings-card,#settingsPage .account-section,#settingsPage .rules-section{background:var(--surface);border-radius:24px;padding:18px;margin:0 0 10px}
+#settingsPage .account-section>label{display:block;font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
+#settingsPage .account-section .rate-info{margin:0 0 12px;line-height:1.45}
+#settingsPage .account-link-form{display:grid;gap:10px}
+#settingsPage .broker-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+#settingsPage .broker-actions button{width:100%;min-width:0;padding:0 10px}
+#settingsPage .tour-replay{display:flex;align-items:center;justify-content:space-between;width:100%;margin:0 0 10px;padding:16px 18px;border:0;border-radius:24px;background:var(--surface);text-align:left}
+#settingsPage .tour-replay::after{content:"\2192";color:var(--muted)}
+#settingsPage .rules-header{padding:0}
+#settingsPage .logout-button{margin:22px 0 120px}
+
+/* ===== Анализ сделки ===== */
+#analysisPage .an-title{margin:0 0 4px;font-size:28px;letter-spacing:-.03em}
+#analysisPage .an-sub-title{margin:0 0 6px;font-size:14px;line-height:1.45;color:var(--muted)}
+.an-step{display:flex;align-items:center;gap:10px;margin:26px 4px 10px;font-size:13px;font-weight:600;color:var(--muted)}
+.an-step i{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--surface-2);color:var(--text);font-style:normal;font-size:12px}
+.an-head+#anChartWrap{margin-top:12px}
+#analysisPage .an-dir,#analysisPage .an-score,#analysisPage .an-plan{margin-top:0}
+#analysisPage .an-step:first-of-type{margin-top:18px}
+.an-step-score:has(+ .an-idle){display:none}
+/* оценка: цветная полоса по вердикту */
+.an-score{position:relative;overflow:hidden;border:1px solid var(--line)}
+.an-score::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--loss)}
+.an-score:has(.an-amber)::before{background:var(--warn)}
+.an-score:has(.an-green)::before{background:var(--profit)}
+.an-score-main strong{font-size:22px;letter-spacing:-.02em}
+.an-bar{grid-template-columns:96px minmax(0,1fr) 44px}
+.an-bar i{height:10px}
+/* план */
+.an-plan{border:1px solid var(--line)}
+.an-grid .an-field span{display:flex;align-items:center;gap:6px;font-weight:600}
+.an-grid .an-field span::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.an-grid .an-field:nth-child(2) span::before{background:var(--loss)}
+.an-grid .an-field:nth-child(3) span::before{background:var(--profit)}
+.an-plan .an-field input{text-align:center;font-weight:600}
+.an-tile b{font-size:22px}
+/* «Подробнее» */
+.an-more>summary{border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--text);font-weight:600}
+.an-more-body{gap:10px;padding-top:12px}
+.an-sub{border:1px solid var(--line)}
+.an-h{font-size:16px}
+.an-check{padding:12px 14px;border-radius:14px;background:var(--surface-2)}
+.an-check:has(input:checked){background:color-mix(in srgb,var(--accent) 16%,var(--surface-2))}
+.an-checks{gap:8px}
+.an-rules li{padding-left:14px;position:relative}
+.an-rules li::before{content:"";position:absolute;left:0;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--line)}
+.an-reset{width:100%;margin-top:14px;padding:14px;border-radius:16px}
+#analysisPage{padding-bottom:120px}
