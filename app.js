@@ -3338,7 +3338,7 @@ function initTheme() {
             "appTheme"
         );
 
-    if (saved === "light") {
+    if (saved !== "dark") {
 
         currentTheme = "light";
 

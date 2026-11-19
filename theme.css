@@ -1,0 +1,74 @@
+/* Ncap · theme.css — «светлый и воздушный»: цвета, формы, шрифты, анимации. Подключается последним; логику не трогает. */
+:root{
+  --sans:"Manrope","Onest",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --display:"Manrope","Onest",system-ui,sans-serif;
+  --r:26px;--ease:cubic-bezier(.22,1,.36,1);--spring:cubic-bezier(.34,1.56,.64,1);
+  /* тёмная тема: мягкая ночная */
+  --bg:#0d1120;--surface:#151a2e;--surface-2:#1d2339;--surface-3:#272e4a;
+  --text:#eef1fb;--muted:#8d97b5;--line:rgba(190,205,255,.08);--line-hi:rgba(190,205,255,.16);
+  --accent:#8ea2ff;--accent-2:#7a8cf5;--on-accent:#0d1230;--profit:#4fd8a8;--loss:#ff7b8b;--warn:#f2c46d;--on-solid:#06140f;
+  --glow-1:rgba(120,140,255,.18);--glow-2:rgba(79,216,168,.10);--grain:0;
+  --shadow:0 16px 36px -20px rgba(0,0,0,.7);
+  --glass:rgba(21,26,46,.72);--glass-edge:inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px var(--line-hi);--glow-in:var(--glass-edge);
+}
+html.light-theme{
+  color-scheme:light;
+  --bg:#f3f6fc;--surface:#fff;--surface-2:#eef2fa;--surface-3:#e1e7f4;
+  --text:#0f1730;--muted:#6a7595;--line:rgba(15,23,48,.06);--line-hi:rgba(15,23,48,.12);
+  --accent:#4f63f5;--accent-2:#7b6cff;--on-accent:#fff;--profit:#0fb27f;--loss:#ee4d68;--warn:#c98a0b;
+  --glow-1:rgba(110,130,255,.24);--glow-2:rgba(52,211,153,.20);
+  --shadow:0 18px 40px -24px rgba(40,60,140,.38),0 2px 6px -3px rgba(40,60,140,.08);
+  --glass:rgba(255,255,255,.76);--glass-edge:inset 0 1px 0 #fff,inset 0 0 0 1px rgba(15,23,48,.05);--glow-in:var(--glass-edge);
+  --g-a:#059669;--g-b:#10b981;--g-c:#34d399;--g-glow:rgba(16,185,129,.4);
+}
+body{letter-spacing:0;font-weight:500}
+h1,h2,.hero strong{font-weight:800;letter-spacing:-.03em}
+
+/* фон: тихие цветные пятна, медленно дрейфуют */
+body::before{display:block;content:"";position:fixed;inset:-10%;z-index:-2;pointer-events:none;
+  background:radial-gradient(42% 34% at 85% 6%,var(--glow-1),transparent 70%),radial-gradient(40% 32% at 6% 92%,var(--glow-2),transparent 70%),radial-gradient(30% 24% at 96% 62%,var(--glow-1),transparent 72%);
+  animation:ncDrift 28s ease-in-out infinite alternate}
+body::after{opacity:0}
+@keyframes ncDrift{to{transform:translate3d(-2%,2%,0) scale(1.06)}}
+
+/* карточки: белые, крупные скругления, мягкая тень вместо рамок */
+.app :is(.hero,.card,.settings-card,.account-section,.rules-section,.an-score,.an-plan,.an-sub,.an-dir,.all-trades-button,.cp-hero,.cp-card,.cp-acc,.cp-chart,.bd-card,.bd-hero,.cp-empty,.bd-empty,.details-card){box-shadow:var(--shadow);border:1px solid var(--line)}
+html.light-theme .hero{background:linear-gradient(140deg,#fff 0%,#eef1ff 58%,#e5f8f0 100%)}
+html.light-theme :is(.cp-hero,.bd-hero){background:linear-gradient(140deg,#fff 0%,#eefaf5 100%)}
+
+/* поля ввода */
+.app :is(input,select,textarea){border-radius:16px;border:1px solid transparent;transition:box-shadow .25s var(--ease),background .25s}
+.app :is(input,select,textarea):focus{outline:none;background:var(--surface);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 20%,transparent),inset 0 0 0 1.5px var(--accent)}
+
+/* кнопки */
+.app :is(.save-button,.add-button,.edit-button,.update-rates-button,.all-trades-button,.back-button){border-radius:18px;transition:transform .25s var(--spring),box-shadow .25s,background .25s}
+.app :is(button,.all-trades-button):active{transform:scale(.97)}
+.app :is(.save-button,.add-button,.an-go){background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);box-shadow:0 14px 26px -14px var(--accent)}
+.app .fab{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:var(--on-accent);box-shadow:0 16px 30px -10px color-mix(in srgb,var(--accent) 70%,transparent)}
+
+/* нижняя навигация: «парящая» стеклянная капсула */
+.bottom-nav{background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);box-shadow:var(--shadow),var(--glass-edge);border-radius:30px}
+.nav-ind{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:none;border-radius:24px}
+.nav-button.active{color:var(--accent)}
+
+/* переключатели: белая «таблетка» на светлой дорожке */
+.an-seg,#couponsPage .cp-seg,#anBonds .bd-seg{background:var(--surface-2)}
+.an-seg button.active:not([data-v]),#couponsPage .cp-seg button.active,#anBonds .bd-seg button.active{background:var(--surface);color:var(--text);box-shadow:0 6px 14px -8px rgba(40,60,140,.4)}
+#couponsPage .cp-chips button,#anBonds .bd-chips button{box-shadow:var(--shadow);transition:transform .25s var(--spring),background .2s}
+#couponsPage .cp-chips button:active,#anBonds .bd-chips button:active{transform:scale(.95)}
+
+/* анимации появления и касаний */
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@media (hover:hover){
+  .app :is(.all-trades-button,.cp-acc,.bd-item,.card){transition:transform .3s var(--ease),box-shadow .3s}
+  .app .all-trades-button:hover{transform:translateY(-2px)}
+}
+@media (prefers-reduced-motion:reduce){body::before{animation:none}}
+
+/* верхняя панель прозрачная, при прокрутке — стекло; цифры тем же шрифтом, без моно */
+.topbar{background:transparent;box-shadow:none}
+body.scrolled .topbar{background:var(--glass);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.hero strong,#monthPnl,#pfTotal,.an-tile b,.an-ring-num b{font-family:var(--display);font-weight:800}
+
+/* главная кнопка в настройках в цвет акцента */
+.app .account-link-form .update-rates-button:not(:disabled){background:linear-gradient(135deg,var(--accent),var(--accent-2));background-size:auto;animation:none;color:var(--on-accent);box-shadow:0 14px 26px -14px var(--accent)}

@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ncap</title>
-    <meta name="theme-color" content="#070b16">
-    <script>try{if(localStorage.getItem("appTheme")==="light")document.documentElement.classList.add("light-theme");if(localStorage.getItem("hideBalance")==="1")document.documentElement.classList.add("privacy")}catch(e){}</script>
+    <meta name="theme-color" content="#f3f6fc">
+    <script>try{if(localStorage.getItem("appTheme")!=="dark")document.documentElement.classList.add("light-theme");if(localStorage.getItem("hideBalance")==="1")document.documentElement.classList.add("privacy")}catch(e){}</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=JetBrains+Mono:wght@400..700&family=Onest:wght@400..700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=JetBrains+Mono:wght@400..700&family=Onest:wght@400..700&family=Manrope:wght@400..800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="tabs.css">
+    <link rel="stylesheet" href="theme.css">
 </head>
 
 <body>
@@ -907,6 +908,7 @@
 <script src="ui.js"></script>
 <script src="onboarding.js"></script>
 <script src="coupons.js"></script>
+    <script src="bonds.js"></script>
 <script>
 /* Вход по email и паролю */
 (function () {
